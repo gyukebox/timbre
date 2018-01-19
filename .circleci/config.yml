@@ -18,9 +18,7 @@ jobs:
 
     steps:
       # update npm
-      - run:
-        name: Update npm
-        command: 'sudo npm install -g npm@latest'
+      - run: npm install -g npm@latest
 
       # Download and cache dependencies
       - restore_cache:
@@ -32,7 +30,7 @@ jobs:
       # update packages
       - run: 
         name: Update packages
-        command: 'npm install'
+        command: npm install
 
       - save_cache:
           paths:
