@@ -51,10 +51,9 @@ jobs:
     steps:
       - checkout
       # install python and pip
+      - run: sudo apt-get update
       - run: sudo apt-get install python3
-      - run: curl -O https://bootstrap.pypa.io/get-pip.py
-      - run: python3 get-pip.py --user
-      - run: export PATH=~/.local/bin:$PATH
+      - run: sudo apt-get install python-pip
       - run: pip install --upgrade pip
       # install eb client
       - run: pip install awsebcli --upgrade --user
