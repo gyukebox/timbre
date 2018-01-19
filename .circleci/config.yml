@@ -53,6 +53,7 @@ jobs:
       # install python and pip
       - run: sudo apt-get update
       - run: sudo apt-get install python3
+      - run: sudo apt-get install python-dev
       - run: sudo apt-get install python-pip
       - run: pip install --upgrade pip --user
       # install eb client
