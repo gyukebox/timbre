@@ -18,7 +18,7 @@ jobs:
 
     steps:
       # update npm
-      - run: npm install -g npm@latest
+      - run: sudo npm install -g npm@latest
 
       # Download and cache dependencies
       - restore_cache:
@@ -28,7 +28,7 @@ jobs:
           - v1-dependencies-
 
       # update packages
-      - run: npm install
+      - run: sudo npm install
 
       - save_cache:
           paths:
