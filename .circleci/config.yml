@@ -56,19 +56,11 @@ jobs:
       - run: curl -O https://bootstrap.pypa.io/get-pip.py
       - run: python3 get-pip.py --user
       # DEBUG INFORMATION
-      - run: echo $SHELL
-      - run: ls -a ~
-      # Adding to PATH
-      - run: echo 'export PATH=/usr/local/bin:$PATH' >>~/.profile
-      - run: echo 'export PATH=~/.local/bin:$PATH' >>~/.profile
-      # DEBUG INFORMATION
-      - run: cat ~/.profile
-      - run: source ~/.profile
-      - run: pip --version
-      # install eb client
-      - run: pip install awsebcli --upgrade --user
+      - run: ls -al ~/.local/bin
+      # installing aws eb cli
+      - run: ~/.local/bin/pip install awsebcli --upgrade --user
       # deploy
-      - run: eb deploy --profile default
+      - run: ~/.local/bin/eb deploy --profile default
 
 
 workflows:
