@@ -62,11 +62,8 @@ jobs:
       - run: ~/.local/bin/pip install awsebcli --upgrade --user
       # DEBUG INFORMATION - TODO delete
       - run: echo $AWS_ACCESS_KEY_ID && echo $AWS_SECRET_ACCESS_KEY
-      # deploy
       - run: bash ./setup-eb.sh
-      # DEBUG INFORMATION - TODO delete
-      - run: echo $AWS_ACCESS_KEY_ID && echo $AWS_SECRET_ACCESS_KEY
-      - run: ~/.local/bin/eb deploy --profile default
+      - run: ~/.local/bin/eb deploy
 
 
 workflows:
