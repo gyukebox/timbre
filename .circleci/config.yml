@@ -61,6 +61,7 @@ jobs:
       # installing aws eb cli
       - run: ~/.local/bin/pip install awsebcli --upgrade --user
       # deploy
+      # - run: ~/.local/bin/eb init --platform node.js --region asia-seoul
       - run: ~/.local/bin/eb deploy --profile default
 
 
