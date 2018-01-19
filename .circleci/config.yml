@@ -59,6 +59,7 @@ jobs:
       - run: echo $SHELL
       - run: ls -a ~
       # Adding to PATH
+      - run: echo 'export PATH=/usr/local/bin:$PATH' >>~/.profile
       - run: echo 'export PATH=~/.local/bin:$PATH' >>~/.profile
       # DEBUG INFORMATION
       - run: cat ~/.profile
