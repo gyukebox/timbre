@@ -14,9 +14,8 @@ jobs:
       # documented at https://circleci.com/docs/2.0/circleci-images/
       - image: circleci/mysql:5.7
 
-    working_directory: /Source
-
     steps:
+      - checkout
       # update npm
       - run: sudo npm install -g npm@latest
 
@@ -34,14 +33,6 @@ jobs:
           paths:
             - node_modules
           key: v1-dependencies-{{ checksum "package.json" }}
-    
-    deploy:
-      docker:
-        - image: circleci/node:latest
-        - image: circleci/mysql:5.7
-      working_directory: /Source
-      steps:
-        
         
       # run tests!
       # - run: npm test
