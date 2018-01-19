@@ -60,8 +60,12 @@ jobs:
       - run: ls -al ~/.local/bin
       # installing aws eb cli
       - run: ~/.local/bin/pip install awsebcli --upgrade --user
+      # DEBUG INFORMATION - TODO delete
+      - run: echo $AWS_ACCESS_KEY_ID && echo $AWS_SECRET_ACCESS_KEY
       # deploy
-      # - run: ~/.local/bin/eb init --platform node.js --region asia-seoul
+      - run: bash ./setup-eb.sh
+      # DEBUG INFORMATION - TODO delete
+      - run: echo $AWS_ACCESS_KEY_ID && echo $AWS_SECRET_ACCESS_KEY
       - run: ~/.local/bin/eb deploy --profile default
 
 
