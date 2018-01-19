@@ -55,10 +55,14 @@ jobs:
       - run: sudo apt-get install python3
       - run: curl -O https://bootstrap.pypa.io/get-pip.py
       - run: python3 get-pip.py --user
-      - run : echo $SHELL
-      - run : ls -a ~
-      - run: cat >> ~/.bash_profile <<x export PATH=~/.local/bin:$PATH x
-      - run: source ~/.bash_profile
+      # DEBUG INFORMATION
+      - run: echo $SHELL
+      - run: ls -a ~
+      # Adding to PATH
+      - run: echo 'export PATH=~/.local/bin:$PATH' >>~/.profile
+      # DEBUG INFORMATION
+      - run: cat ~/.profile
+      - run: source ~/.profile
       - run: pip --version
       # install eb client
       - run: pip install awsebcli --upgrade --user
