@@ -63,7 +63,7 @@ jobs:
       # DEBUG INFORMATION - TODO delete
       - run: echo $AWS_ACCESS_KEY_ID && echo $AWS_SECRET_ACCESS_KEY
       - run: bash ./setup-eb.sh
-      - run: ~/.local/bin/eb deploy
+      - run: cd project && ~/.local/bin/eb deploy
 
 
 workflows:
