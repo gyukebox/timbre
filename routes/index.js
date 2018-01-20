@@ -5,7 +5,16 @@ const router = express.Router();
 /* GET home page. */
 router.get('/', (req, res, next) => {
   res.json({
-    message: 'Hello world from Node.js and Elastic Beanstalk!',
+    branch: [
+      {
+        name: 'master',
+        message: 'Hello world from Node.js and Elastic Beanstalk!',
+      },
+      {
+        name: 'gyu',
+        message: 'Sample commit from gyu',
+      },
+    ],
   });
 });
 

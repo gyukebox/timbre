@@ -1,4 +1,9 @@
 branch-defaults:
+  # Elastic Beanstalk 환경 추가하는 방법
+  # <BRANCH-NAME>:
+  #   environmant: <ENV-NAME>
+  gyu:
+    environment: timbre-api-env
   master:
     environment: timbre-api-env
     group_suffix: null
@@ -6,7 +11,7 @@ global:
   application_name: timbre-api
   branch: null
   default_ec2_keyname: timbre-keypair
-  default_platform: Node.js
+  default_platform: 64bit Amazon Linux 2017.09 v4.4.4 running Node.js
   default_region: ap-northeast-2
   include_git_submodules: true
   instance_profile: null
