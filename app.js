@@ -3,6 +3,7 @@ const path = require('path');
 const logger = require('morgan');
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
+const redis = require('redis');
 
 const app = express();
 
@@ -19,6 +20,30 @@ app.use('/dashboard', require('./routes/dashboard'));
 app.use('/requests', require('./routes/request'));
 app.use('/search', require('./routes/search'));
 app.use('/users', require('./routes/user'));
+
+// redis configuration
+const redisClient = redis.createClient({
+  host: process.env.TIMBRE_CACHE,
+});
+
+redisClient.on('error', (err) => {
+  console.error(`Error: ${err}`);
+});
+
+redisClient.set('foo', 'bar', (err, reply) => {
+  if (err) {
+    console.error(err);
+  } else {
+    console.log(reply);
+  }
+});
+redisClient.get('foo', (err, reply) => {
+  if (err) {
+    console.log(err);
+  } else {
+    console.log(reply);
+  }
+});
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {
