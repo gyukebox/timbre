@@ -1,7 +1,5 @@
 const resources = {};
 
-resources.database = {};
-
 // TODO add hostname / username / password after initializing rds
 resources.database = {
   schema: 'timbre',
