@@ -2,6 +2,6 @@ const Sequelize = require('sequelize');
 
 module.exports = {
 
-  role: Sequelize.ENUM('ROLE_USER', 'ROLE_ADMIN'),
-  type: Sequelize.ENUM('ACTOR', 'CLIENT'),
+  userRole: Sequelize.ENUM('ROLE_USER', 'ROLE_ADMIN'),
+  userType: Sequelize.ENUM('ACTOR', 'CLIENT'),
 };

@@ -21,11 +21,12 @@ const columns = {
     allowNull: false,
   },
   role: {
-    type: types.role,
+    type: types.userRole,
     allowNull: false,
+    defaultValue: 'ROLE_USER',
   },
   type: {
-    type: types.type,
+    type: types.userType,
     allowNull: false,
   },
   active: {
