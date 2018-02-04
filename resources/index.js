@@ -13,5 +13,8 @@ resources.database.pool = {
 };
 
 // TODO : 공통 프로퍼티 추가
+resources.cache = {
+  detect_buffers: true,
+};
 
 module.exports = resources;
