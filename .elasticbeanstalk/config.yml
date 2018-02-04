@@ -1,8 +1,7 @@
 branch-defaults:
-  # Elastic Beanstalk 환경 추가하는 방법
-  # <BRANCH-NAME>:
-  #   environmant: <ENV-NAME>
   gyu:
+    environment: timbre-api-env
+  issue-0003:
     environment: timbre-api-env
   master:
     environment: timbre-api-env
@@ -17,7 +16,7 @@ global:
   instance_profile: null
   platform_name: null
   platform_version: null
-  profile: eb-cli
+  profile: null
   repository: null
   sc: git
   workspace_type: Application

@@ -1,11 +1,15 @@
 const resources = {};
 
-resources.database = {};
+resources.database = {
+  schema: 'timbre',
+  dialect: 'mysql',
+  hostname: 'localhost',
+  username: 'timbre',
+  password: 'password',
+};
 
-resources.database.schema = 'timbre';
-resources.database.dialect = 'mysql';
-resources.database.hostname = 'localhost';
-resources.database.username = 'timbre';
-resources.database.password = 'timbre_password';
+resources.cache = {
+  host: '127.0.0.1',
+};
 
 module.exports = resources;
