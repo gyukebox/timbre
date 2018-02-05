@@ -4,7 +4,7 @@ const logger = require('morgan');
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const session = require('express-session');
-const RedisStore = require('connect-redis')(session);
+const resources = require('./resources/index');
 
 const app = express();
 
@@ -15,14 +15,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // session configuration
-app.use(session({
-  store: new RedisStore(),
-  key: 'sid',
-  secret: 'secret',
-  cookie: {
-    maxAge: 1000 * 60 * 60, // 1 hour
-  },
-}));
+app.use(session(resources.session));
 
 app.use('/', require('./routes/index'));
 app.use('/biddings', require('./routes/bidding'));

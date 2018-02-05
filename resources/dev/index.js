@@ -12,4 +12,6 @@ resources.cache = {
   host: '127.0.0.1',
 };
 
+resources.host = 'localhost:3000';
+
 module.exports = resources;
