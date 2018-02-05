@@ -1,61 +1,91 @@
 const sequelize = require('sequelize');
 const nodemailer = require('nodemailer');
 const uuid = require('uuid/v4');
+const database = require('../models/database');
 const userModel = require('../models/user/user');
 const accountModel = require('../models/user/account');
+const { host } = require('../resources/index');
+
+class ValidationError {
+  constructor(message) {
+    this.name = 'ValidationError';
+    this.message = message;
+  }
+}
+
+const validatePassword = (password) => {
+  const validPattern = /(?!^[0-9]*$)(?!^[a-zA-Z]*$)^([a-zA-Z0-9]{4,16})$/;
+  if (!validPattern.test(password)) {
+    throw new ValidationError('Invalid password!');
+  }
+};
+
+function validateEmail(email) {
+  const validPattern = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  if (!validPattern.test(email)) {
+    throw new ValidationError('Invalid email!');
+  }
+}
 
 exports.join = (req, res) => {
-  if (req.session.auth_token === undefined || req.body.token !== req.session.auth_token) {
-    res.status(412).send('회원가입 조건을 만족하지 않습니다');
+  try {
+    validatePassword(req.body.password);
+    validateEmail(req.body.mail);
+  } catch (error) {
+    res.status(412).json({ message: '회원가입 조건을 만족하지 않습니다.', detail: error.message });
     return;
   }
 
-  req.session.auth_token = undefined;
-
   userModel
-    .findOrCreate({
+    .findOne({
       where: {
         [sequelize.Op.or]: {
           mail: req.body.mail,
           name: req.body.username,
         },
       },
-      defaults: {
-        mail: req.body.mail,
-        name: req.body.username,
-        type: req.body.type,
-        token: req.body.token,
-        profile: req.file === undefined ? null : req.file.path,
-      },
     })
-    .spread((user, created) => {
-      if (created) {
-        accountModel.create({
-          userId: user.dataValues.userId,
-          password: req.body.password,
-        });
-        res.status(201).json({
-          message: '회원가입에 성공했습니다!',
-          detail: user,
-        });
+    .then((result) => {
+      if (result !== null) {
+        res.status(409).json({ message: '해당 이메일이나 닉네임으로 이미 가입된 정보가 있습니다.', detail: result });
       } else {
-        res.status(409).json({
-          message: '해당 이메일이나 닉네임으로 이미 가입된 정보가 있습니다.',
-          detail: user,
-        });
+        database
+          .transaction()
+          .then((transaction) => {
+            const userProperties = {
+              name: req.body.username,
+              mail: req.body.mail,
+              type: req.body.type,
+              profile: req.file === undefined ? null : req.file.path,
+            };
+
+            userModel
+              .create(userProperties, { transaction })
+              .then((user) => {
+                const newAccountProperties = {
+                  userId: user.userId,
+                  password: req.body.password,
+                };
+
+                accountModel
+                  .create(newAccountProperties, { transaction })
+                  .then((account) => {
+                    transaction.commit();
+                    res.status(201).json({ message: '회원가입에 성공했습니다!', user, account });
+                  });
+              })
+
+              .catch(sequelize.ValidationError, (err) => {
+                transaction.rollback();
+                res.status(412).json({ message: '회원가입 조건을 만족하지 않습니다.', detail: err });
+              })
+
+              .catch((err) => {
+                transaction.rollback();
+                res.status(400).json({ message: '알 수 없는 예외가 발생했습니다.', detail: err });
+              });
+          });
       }
-    })
-    .catch(sequelize.ValidationError, (err) => {
-      res.status(412).json({
-        message: '회원가입 조건을 만족하지 않습니다.',
-        detail: err,
-      });
-    })
-    .catch((err) => {
-      res.status(400).json({
-        message: '알 수 없는 예외가 발생했습니다.',
-        detail: err,
-      });
     });
 };
 
@@ -94,7 +124,7 @@ exports.login = (req, res) => {
 };
 
 exports.logout = (req, res) => {
-  if (req.session.user === null || req.session.user === undefined) {
+  if (req.session.user === undefined || req.session.user === null) {
     res.status(400).send('로그아웃에 실패했습니다');
   } else {
     req.session.user = undefined;
@@ -103,7 +133,14 @@ exports.logout = (req, res) => {
 };
 
 exports.changePassword = (req, res) => {
-  if (req.session.user === null || req.session.user === undefined) {
+  try {
+    validatePassword(req.body.password);
+  } catch (error) {
+    res.status(400).json({ message: '비밀번호 변경에 실패했습니다.', detail: error.message });
+    return;
+  }
+
+  if (req.session.user === undefined || req.session.user === null) {
     res.status(401).send('로그인이 필요합니다.');
   } else {
     accountModel
@@ -132,13 +169,31 @@ exports.changePassword = (req, res) => {
   }
 };
 
-exports.validateEmail = (req, res) => {
+exports.sendVerificationMail = (req, res) => {
   const token = uuid();
+  userModel
+    .findOne({
+      where: {
+        userId: req.params.id,
+      },
+    })
+    .then((user) => {
+      if (user === null) {
+        req.status(404).send('사용자를 찾을 수 없습니다.');
+      } else {
+        const validationToken = {
+          token,
+          expiry: Date.now() + (1000 * 60 * 60),
+        };
+        user.update(validationToken);
+      }
+    });
+
   const message = {
     from: 'timbredeveloper@gmail.com',
     to: req.body.mail,
     subject: 'Authentication email',
-    html: `<h2>아래 코드가 이메일 인증 코드입니다. 회원가입 시 명시하세요.</h2> <p>${token}</p>`,
+    html: `<h2>다음 링크로 들어가 이메일 인증을 완료하세요!</h2> <a href="http://${host}/users/${req.params.id}/auth_email?token=${token}">이메일 인증하기</a>`,
   };
   const smtp = nodemailer.createTransport({
     service: 'gmail',
@@ -155,12 +210,28 @@ exports.validateEmail = (req, res) => {
         detail: err,
       });
     } else {
-      req.session.auth_token = token;
       res.json({
         message: '인증 메일을 성공적으로 보냈습니다.',
         detail: info.envelope,
       });
     }
   });
+};
+
+exports.verifyEmail = (req, res) => {
+  userModel
+    .findOne({
+      attributes: ['token', 'expiry'],
+      where: { userId: req.params.id },
+    })
+    .then((user) => {
+      if (req.query.token !== user.token) {
+        res.status(400).json({ message: '인증에 실패하였습니다' });
+      } else if (Date(user.expiry) < Date.now()) {
+        res.status(400).json({ message: '인증에 실패하였습니다' });
+      } else {
+        res.json({ message: '인증에 성공하였습니다!' });
+      }
+    });
 };
 

@@ -40,7 +40,8 @@ router.post('/join', upload.single('profile'), account.join);
 router.post('/login', account.login);
 router.post('/logout', account.logout);
 router.post('/change_password', account.changePassword);
-router.post('/auth_email', account.validateEmail);
+router.get('/:id/auth_email', account.verifyEmail);
+router.post('/:id/auth_email', account.sendVerificationMail);
 
 // 프로필
 router.get('/:id', profile.getProfile);
