@@ -4,7 +4,6 @@ const user = require('./user');
 const database = require('../database');
 
 const columns = {
-
   userId: {
     type: Sequelize.INTEGER,
     field: 'user_id',
@@ -18,22 +17,26 @@ const columns = {
     type: Sequelize.STRING(300),
     allowNull: false,
   },
-  bankType: {
+  bank_type: {
     type: Sequelize.STRING(100),
     allowNull: true,
   },
-  bankAccount: {
+  bank_account: {
     type: Sequelize.STRING(200),
     allowNull: true,
   },
 };
 
 const options = {
-
   tableName: 'accounts',
   freezeTableName: true,
   underscored: true,
   createdAt: false,
 };
 
-module.exports = database.define('account', columns, options);
+const accountModel = database.define('account', columns, options);
+process.nextTick(() => {
+  accountModel.belongsTo(user, { foreignKey: 'userId' });
+});
+
+module.exports = accountModel;

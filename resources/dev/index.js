@@ -5,7 +5,7 @@ resources.database = {
   dialect: 'mysql',
   hostname: 'localhost',
   username: 'timbre',
-  password: 'password',
+  password: 'timbre_password',
 };
 
 resources.cache = {
