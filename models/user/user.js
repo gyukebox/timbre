@@ -3,7 +3,6 @@ const types = require('../type/types');
 const database = require('../database');
 
 const columns = {
-
   userId: {
     type: Sequelize.INTEGER,
     field: 'user_id',
@@ -21,11 +20,12 @@ const columns = {
     allowNull: false,
   },
   role: {
-    type: types.role,
+    type: types.userRole,
     allowNull: false,
+    defaultValue: 'ROLE_USER',
   },
   type: {
-    type: types.type,
+    type: types.userType,
     allowNull: false,
   },
   active: {
@@ -56,10 +56,15 @@ const columns = {
 };
 
 const options = {
-
   tableName: 'users',
   freezeTableName: true,
   underscored: true,
 };
 
-module.exports = database.define('user', columns, options);
+const userModel = database.define('user', columns, options);
+process.nextTick(() => {
+  const account = require('./account');
+  userModel.hasOne(account, { foreignKey: 'userId' });
+});
+
+module.exports = userModel;
