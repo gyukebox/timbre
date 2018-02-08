@@ -18,6 +18,9 @@ const columns = {
     type: Sequelize.STRING(300),
     unique: true,
     allowNull: false,
+    validate: {
+      isEmail: true,
+    },
   },
   role: {
     type: types.userRole,

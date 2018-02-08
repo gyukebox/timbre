@@ -6,36 +6,7 @@ const userModel = require('../models/user/user');
 const accountModel = require('../models/user/account');
 const { host } = require('../resources/index');
 
-class ValidationError {
-  constructor(message) {
-    this.name = 'ValidationError';
-    this.message = message;
-  }
-}
-
-const validatePassword = (password) => {
-  const validPattern = /(?!^[0-9]*$)(?!^[a-zA-Z]*$)^([a-zA-Z0-9]{4,16})$/;
-  if (!validPattern.test(password)) {
-    throw new ValidationError('Invalid password!');
-  }
-};
-
-function validateEmail(email) {
-  const validPattern = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-  if (!validPattern.test(email)) {
-    throw new ValidationError('Invalid email!');
-  }
-}
-
 exports.join = (req, res) => {
-  try {
-    validatePassword(req.body.password);
-    validateEmail(req.body.mail);
-  } catch (error) {
-    res.status(412).json({ message: '회원가입 조건을 만족하지 않습니다.', detail: error.message });
-    return;
-  }
-
   userModel
     .findOne({
       where: {
@@ -72,6 +43,14 @@ exports.join = (req, res) => {
                   .then((account) => {
                     transaction.commit();
                     res.status(201).json({ message: '회원가입에 성공했습니다!', user, account });
+                  })
+                  .catch(sequelize.ValidationError, (err) => {
+                    transaction.rollback();
+                    res.status(412).json({ message: '회원가입 조건을 만족하지 않습니다.', detail: err });
+                  })
+                  .catch((err) => {
+                    transaction.rollback();
+                    res.status(400).json({ message: '알 수 없는 예외가 발생했습니다.', detail: err });
                   });
               })
 
