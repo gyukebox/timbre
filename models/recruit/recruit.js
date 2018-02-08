@@ -32,15 +32,21 @@ const columns = {
     field: 'actor_name',
     allowNull: true,
   },
-  title: sequelize.STRING(300),
-  description: sequelize.STRING(2000),
+  title: sequelize.STRING(64),
+  description: sequelize.STRING(512),
   state: {
     type: types.recruitStateType,
     defaultValue: 'WAIT_DEPOSIT',
   },
   category: sequelize.STRING(100),
   mood: sequelize.STRING(100),
-  amount: sequelize.INTEGER,
+  amount: {
+    type: sequelize.INTEGER,
+    validate: {
+      min: 30000,
+      max: Number.MAX_VALUE,
+    },
+  },
   active: {
     type: sequelize.BOOLEAN,
     defaultValue: true,
@@ -87,6 +93,3 @@ const recruitModel = database.define('recruit', columns, options);
 recruitModel.belongsTo(user, { foreignKey: 'client_id' });
 
 module.exports = recruitModel;
-
-
-/* TODO write validators */

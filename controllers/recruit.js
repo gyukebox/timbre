@@ -2,11 +2,81 @@ const sequelize = require('sequelize');
 const recruitModel = require('../models/recruit/recruit');
 
 exports.getRecruitList = (req, res) => {
+  const attributes = [
+    'recruit_id', 'title', 'amount', 'created_at',
+    'category', 'mood', 'recruit_due_date', 'process_due_date',
+    'bid_count', 'state', 'client_id', 'client_name',
+  ];
+  const order = [['recruit_id', 'DESC']];
+  const offset = req.query.from === undefined ? 0 : Number(req.query.from);
+  const limit = req.query.size === undefined ? 50 : Number(req.query.size);
 
+  recruitModel
+    .findAndCountAll({
+      attributes, order, offset, limit,
+    })
+    .then((retrieved) => {
+      const total = retrieved.count;
+      const response = {
+        pages: {
+          total,
+          from: offset,
+          size: retrieved.rows.length,
+          has_next: (total > offset + limit),
+        },
+        recruits: retrieved.rows,
+      };
+      res.json(response);
+    })
+    .catch((err) => {
+      res.status(400).json({
+        message: '구인 목록 조회에 실패했습니다.',
+        detail: err,
+      });
+    });
 };
 
 exports.searchRecruits = (req, res) => {
+  const attributes = [
+    'recruit_id', 'title', 'amount', 'created_at',
+    'category', 'mood', 'recruit_due_date', 'process_due_date',
+    'bid_count', 'state', 'client_id', 'client_name',
+  ];
+  const order = [['recruit_id', 'DESC']];
+  const offset = req.query.from === undefined ? 0 : Number(req.query.from);
+  const limit = req.query.size === undefined ? 50 : Number(req.query.size);
 
+  const query = Object.assign({}, req.query);
+  delete query.from;
+  delete query.size;
+
+  recruitModel
+    .findAndCountAll({
+      where: query,
+      attributes,
+      order,
+      offset,
+      limit,
+    })
+    .then((retrieved) => {
+      const total = retrieved.count;
+      const response = {
+        pages: {
+          total,
+          from: offset,
+          size: retrieved.rows.length,
+          has_next: (total > offset + limit),
+        },
+        recruits: retrieved.rows,
+      };
+      res.json(response);
+    })
+    .catch((err) => {
+      res.status(400).json({
+        message: '구인 목록 조회에 실패했습니다.',
+        detail: err,
+      });
+    });
 };
 
 exports.getRecruitDetail = (req, res) => {
@@ -94,7 +164,6 @@ exports.getRecruitSample = (req, res) => {
     });
 };
 
-// TODO write validators
 exports.createRecruit = (req, res) => {
   if (req.session.user === undefined || req.session.user === null) {
     res.status(401).send('로그인한 사용자만 작성할 수 있습니다.');

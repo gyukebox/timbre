@@ -2,6 +2,10 @@
     "extends": "airbnb-base",
     "rules": {
         "global-require": "warn",
+        "max-len": [
+            "warn",
+            128
+        ],
         "no-console": "warn",
         "no-plusplus": "off"
     }
