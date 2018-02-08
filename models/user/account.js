@@ -17,12 +17,14 @@ const columns = {
     type: Sequelize.STRING(300),
     allowNull: false,
   },
-  bank_type: {
+  bankType: {
     type: Sequelize.STRING(100),
+    field: 'bank_type',
     allowNull: true,
   },
-  bank_account: {
+  bankAccount: {
     type: Sequelize.STRING(200),
+    field: 'bank_account',
     allowNull: true,
   },
 };
