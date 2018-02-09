@@ -1,4 +1,5 @@
 const sequelize = require('sequelize');
+const database = require('../models/database');
 const recruitModel = require('../models/recruit/recruit');
 
 exports.getRecruitList = (req, res) => {
@@ -13,7 +14,11 @@ exports.getRecruitList = (req, res) => {
 
   recruitModel
     .findAndCountAll({
-      attributes, order, offset, limit,
+      where: { active: true },
+      attributes,
+      order,
+      offset,
+      limit,
     })
     .then((retrieved) => {
       const total = retrieved.count;
@@ -47,6 +52,7 @@ exports.searchRecruits = (req, res) => {
   const limit = req.query.size === undefined ? 50 : Number(req.query.size);
 
   const query = Object.assign({}, req.query);
+  query.active = true;
   delete query.from;
   delete query.size;
 
@@ -210,6 +216,53 @@ exports.createRecruit = (req, res) => {
 };
 
 exports.cancelRecruit = (req, res) => {
-
+  if (req.session.user === undefined || req.session.user === null) {
+    res.status(401).send('로그인한 사용자만 취소할 수 있습니다.');
+  } else if (req.session.user.type !== 'ACTOR') {
+    res.status(403).send('구인에 참여한 성우만 취소할 수 있습니다.');
+  } else {
+    database
+      .transaction()
+      .then((transaction) => {
+        recruitModel
+          .findOne({
+            where: { recruit_id: req.params.id },
+          })
+          .then((retrieved) => {
+            const cannotCancelState = ['WAIT_FEEDBACK', 'ON_WITHDRAW', 'DONE'];
+            if (retrieved.actor_id !== req.session.user.userId) {
+              transaction.rollback();
+              res.status(403).send('구인에 참여한 성우만 취소할 수 있습니다.');
+            } else if (cannotCancelState.indexOf(retrieved.state) !== -1) {
+              transaction.rollback();
+              res.status(412).send('요청을 취소할 수 없는 상태입니다.');
+            } else {
+              transaction.commit();
+              retrieved
+                .update({
+                  state: 'CANCELLED',
+                  active: false,
+                }).then((result) => {
+                  res.status(204).json({
+                    message: '구인 취소에 성공했습니다.',
+                    detail: result,
+                  });
+                });
+            }
+          })
+          .catch((err) => {
+            transaction.rollback();
+            res.status(400).json({
+              message: '구인 취소에 실패했습니다.',
+              detail: err,
+            });
+          });
+      })
+      .catch((err) => {
+        res.status(400).json({
+          message: '구인 취소에 실패했습니다.',
+          detail: err,
+        });
+      });
+  }
 };
-
