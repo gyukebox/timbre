@@ -23,7 +23,8 @@
     "redis": "^2.8.0",
     "sequelize": "^4.31.2",
     "serve-favicon": "~2.4.5",
-    "uuid": "^3.2.1"
+    "uuid": "^3.2.1",
+    "winston": "^2.4.0"
   },
   "devDependencies": {
     "eslint": "^4.15.0",

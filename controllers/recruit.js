@@ -1,6 +1,6 @@
-const sequelize = require('sequelize');
 const database = require('../models/database');
 const recruitModel = require('../models/recruit/recruit');
+const paragraphModel = require('../models/recruit/paragraph');
 
 exports.getRecruitList = (req, res) => {
   const attributes = [
@@ -33,10 +33,9 @@ exports.getRecruitList = (req, res) => {
       };
       res.json(response);
     })
-    .catch((err) => {
+    .catch(() => {
       res.status(400).json({
         message: '구인 목록 조회에 실패했습니다.',
-        detail: err,
       });
     });
 };
@@ -77,10 +76,9 @@ exports.searchRecruits = (req, res) => {
       };
       res.json(response);
     })
-    .catch((err) => {
+    .catch(() => {
       res.status(400).json({
         message: '구인 목록 조회에 실패했습니다.',
-        detail: err,
       });
     });
 };
@@ -102,10 +100,9 @@ exports.getRecruitDetail = (req, res) => {
         res.json(retrieved);
       }
     })
-    .catch((err) => {
+    .catch(() => {
       res.status(400).json({
         message: '구인 정보 조회에 실패했습니다',
-        detail: err,
       });
     });
 };
@@ -117,7 +114,7 @@ exports.getRecruitBody = (req, res) => {
     recruitModel
       .findOne({
         where: { recruit_id: req.params.id },
-        attributes: ['client_id', 'actor_id', 'script'],
+        attributes: ['client_id', 'actor_id'],
       })
       .then((retrieved) => {
         if (retrieved.client_id === req.session.user.userId || retrieved.actor_id === req.session.userId) {
@@ -125,22 +122,27 @@ exports.getRecruitBody = (req, res) => {
             message: '구인 상세 정보 조회에 성공했습니다.',
             paragraphs: [],
           };
-          const paragraphs = retrieved.script.split('\n\n');
-          for (let i = 0; i < paragraphs.length; i++) {
-            response.paragraphs.push({
-              paragraph: i + 1,
-              content: paragraphs[i],
+
+          paragraphModel
+            .findAll({
+              where: { recruit_id: req.params.id },
+            })
+            .then((paragraphs) => {
+              response.paragraphs = paragraphs;
+              res.json(response);
+            })
+            .catch(() => {
+              res.status(400).json({
+                message: '구인 상세 정보 조회에 실패했습니다.',
+              });
             });
-          }
-          res.json(response);
         } else {
           res.status(403).send('채택된 성우와 요청자만 볼 수 있습니다.');
         }
       })
-      .catch((err) => {
+      .catch(() => {
         res.status(400).json({
           message: '구인 상세 정보 조회에 실패했습니다.',
-          detail: err,
         });
       });
   }
@@ -162,15 +164,12 @@ exports.getRecruitSample = (req, res) => {
         });
       }
     })
-    .catch((err) => {
+    .catch(() => {
       res.status(400).json({
         message: '구인 상세 정보 조회에 성공했습니다',
-        detail: err,
       });
     });
 };
-
-// TODO script paragraph 로 쪼개서 transaction 사용하여 db 에 밀어넣기
 
 exports.createRecruit = (req, res) => {
   if (req.session.user === undefined || req.session.user === null) {
@@ -191,27 +190,39 @@ exports.createRecruit = (req, res) => {
       process_due_date: processDueDate,
       recruit_due_date: recruitDueDate,
       sample: req.body.sample,
-      script: req.body.script,
     };
 
-    recruitModel
-      .create(recruitAttributes)
-      .then((created) => {
-        res.status(201).json({
-          message: '구인 정보 추가에 성공했습니다!',
-          detail: created,
-        });
+    database
+      .transaction()
+      .then((transaction) => {
+        recruitModel
+          .create(recruitAttributes, { transaction })
+          .then((created) => {
+            const paragraphs = req.body.script.split('\n\n');
+            const paragraphAttributes = paragraphs.map((paragraph, index) => ({
+              recruit_id: created.recruit_id,
+              paragraph_number: index + 1,
+              content: paragraph,
+            }));
+
+            paragraphModel
+              .bulkCreate(paragraphAttributes, { transaction })
+              .then(() => {
+                res.status(201).json({
+                  message: '구인 정보 추가에 성공했습니다!',
+                  detail: created,
+                });
+              })
+              .catch(() => {
+                res.status(400).json({
+                  message: '구인 정보 추가에 실패했습니다.',
+                });
+              });
+          });
       })
-      .catch(sequelize.ValidationError, (err) => {
-        res.status(402).json({
-          message: '파라미터가 부족합니다.',
-          detail: err.message,
-        });
-      })
-      .catch((err) => {
+      .catch(() => {
         res.status(400).json({
           message: '구인 정보 추가에 실패했습니다.',
-          detail: err.message,
         });
       });
   }
@@ -252,18 +263,16 @@ exports.cancelRecruit = (req, res) => {
                 });
             }
           })
-          .catch((err) => {
+          .catch(() => {
             transaction.rollback();
             res.status(400).json({
               message: '구인 취소에 실패했습니다.',
-              detail: err,
             });
           });
       })
-      .catch((err) => {
+      .catch(() => {
         res.status(400).json({
           message: '구인 취소에 실패했습니다.',
-          detail: err,
         });
       });
   }

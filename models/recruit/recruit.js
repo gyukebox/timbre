@@ -79,8 +79,10 @@ const columns = {
     type: sequelize.DATE,
     field: 'recruit_due_date',
   },
-  sample: sequelize.STRING(100),
-  script: sequelize.STRING(8000),
+  sample: {
+    type: sequelize.STRING(1000),
+    field: 'sample',
+  },
 };
 
 const options = {
