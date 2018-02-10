@@ -35,6 +35,7 @@ exports.join = (req, res) => {
               .then((user) => {
                 const newAccountProperties = {
                   userId: user.userId,
+                  // TODO encode password
                   password: req.body.password,
                 };
 
@@ -77,6 +78,7 @@ exports.login = (req, res) => {
       attributes: ['userId', 'name', 'mail', 'type'],
       include: [{
         model: accountModel,
+        // TODO encode request-password or decode saved password
         where: {
           password: req.body.password,
         },
@@ -112,13 +114,6 @@ exports.logout = (req, res) => {
 };
 
 exports.changePassword = (req, res) => {
-  try {
-    validatePassword(req.body.password);
-  } catch (error) {
-    res.status(400).json({ message: '비밀번호 변경에 실패했습니다.', detail: error.message });
-    return;
-  }
-
   if (req.session.user === undefined || req.session.user === null) {
     res.status(401).send('로그인이 필요합니다.');
   } else {
@@ -129,6 +124,7 @@ exports.changePassword = (req, res) => {
         },
       })
       .then((account) => {
+        // TODO encode password
         account.update({
           password: req.body.password,
         })
