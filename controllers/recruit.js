@@ -2,6 +2,8 @@ const database = require('../models/database');
 const recruitModel = require('../models/recruit/recruit');
 const paragraphModel = require('../models/recruit/paragraph');
 
+const isBlank = value => value === undefined || value === null || String(value) <= 0;
+
 exports.getRecruitList = (req, res) => {
   const attributes = [
     'recruit_id', 'title', 'amount', 'created_at',
@@ -173,20 +175,37 @@ exports.getRecruitSample = (req, res) => {
 
 exports.createRecruit = (req, res) => {
   if (req.session.user === undefined || req.session.user === null) {
-    res.status(401).send('로그인한 사용자만 작성할 수 있습니다.');
+    res.status(401).json({
+      message: '로그인한 사용자만 작성할 수 있습니다.',
+    });
   } else if (req.session.user.type !== 'CLIENT') {
-    res.status(403).send('성우는 구인 정보를 작성할 수 없습니다.');
+    res.status(403).json({
+      message: '성우는 구인 정보를 작성할 수 없습니다.',
+    });
   } else {
     const recruitDueDate = Date.now() + (1000 * 60 * 60 * 24 * req.body.recruit_duration);
     const processDueDate = recruitDueDate + (1000 * 60 * 60 * 24 * req.body.process_duration);
+    const { title, description } = req.body;
+
+    // 검증
+    if (!Number.isInteger(req.body.amount) || Number(req.body.amount) <= 0 ||
+      isBlank(title) || title.length > 1000 || isBlank(description) || title.length > 8000) {
+
+      res.status(412).json({
+        message: '파라미터가 부족합니다.',
+      });
+
+      return;
+    }
+
     const recruitAttributes = {
       client_id: req.session.user.userId,
       client_name: req.session.user.name,
-      title: req.body.title,
-      description: req.body.description,
+      title,
+      description,
       category: req.body.category,
       mood: req.body.mood,
-      amount: req.body.amount * 10000,
+      amount: Number(req.body.amount) * 10000,
       process_due_date: processDueDate,
       recruit_due_date: recruitDueDate,
       sample: req.body.sample,
