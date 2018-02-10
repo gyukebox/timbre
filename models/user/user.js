@@ -65,6 +65,7 @@ const options = {
 };
 
 const userModel = database.define('user', columns, options);
+
 process.nextTick(() => {
   const account = require('./account');
   userModel.hasOne(account, { foreignKey: 'userId' });

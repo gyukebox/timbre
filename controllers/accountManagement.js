@@ -64,6 +64,9 @@ exports.join = (req, res) => {
                 transaction.rollback();
                 res.status(400).json({ message: '알 수 없는 예외가 발생했습니다.', detail: err });
               });
+          })
+          .catch(() => {
+            res.status(400).json({ message: '알 수 없는 예외가 발생했습니다.' });
           });
       }
     });

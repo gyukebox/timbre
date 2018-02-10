@@ -21,7 +21,7 @@ app.use('/', require('./routes/index'));
 app.use('/biddings', require('./routes/bidding'));
 app.use('/chart', require('./routes/chart'));
 app.use('/dashboard', require('./routes/dashboard'));
-app.use('/requests', require('./routes/request'));
+app.use('/recruits', require('./routes/recruit'));
 app.use('/search', require('./routes/search'));
 app.use('/users', require('./routes/user'));
 
