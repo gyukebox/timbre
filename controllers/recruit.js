@@ -193,12 +193,14 @@ exports.createRecruit = (req, res) => {
   } else {
     const recruitDueDate = Date.now() + (1000 * 60 * 60 * 24 * req.body.recruit_duration);
     const processDueDate = recruitDueDate + (1000 * 60 * 60 * 24 * req.body.process_duration);
-    const { title, description } = req.body;
+    const {
+      title, description, sample, script,
+    } = req.body;
 
     // 검증
     if (!Number.isInteger(req.body.amount) || Number(req.body.amount) <= 0 ||
-      isBlank(title) || title.length > 1000 || isBlank(description) || title.length > 8000) {
-
+        isBlank(title) || title.length > 150 || isBlank(description) || title.length > 1000 ||
+        isBlank(sample) || sample.length > 1000 || isBlank(script) || script.length > 8000) {
       res.status(412).json({
         message: '파라미터가 부족합니다.',
       });
@@ -216,7 +218,7 @@ exports.createRecruit = (req, res) => {
       amount: Number(req.body.amount) * 10000,
       process_due_date: processDueDate,
       recruit_due_date: recruitDueDate,
-      sample: req.body.sample,
+      sample,
     };
 
     database
@@ -225,7 +227,7 @@ exports.createRecruit = (req, res) => {
         recruitModel
           .create(recruitAttributes, { transaction })
           .then((created) => {
-            const paragraphs = req.body.script.split('\n\n');
+            const paragraphs = script.split('\n\n');
             const paragraphAttributes = paragraphs.map((paragraph, index) => ({
               recruit_id: created.recruit_id,
               paragraph_number: index + 1,
