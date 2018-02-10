@@ -90,7 +90,9 @@ exports.login = (req, res) => {
     })
     .then((user) => {
       if (user === null) {
-        res.status(412).send('로그인 정보가 올바르지 않습니다');
+        res.status(412).json({
+          message: '로그인 정보가 올바르지 않습니다',
+        });
       } else {
         req.session.user = user;
         res.status(201).json({
@@ -109,16 +111,22 @@ exports.login = (req, res) => {
 
 exports.logout = (req, res) => {
   if (req.session.user === undefined || req.session.user === null) {
-    res.status(400).send('로그아웃에 실패했습니다');
+    res.status(400).json({
+      message: '로그아웃에 실패했습니다',
+    });
   } else {
     req.session.user = undefined;
-    res.status(204).send('로그아웃에 성공했습니다');
+    res.status(204).json({
+      message: '로그아웃에 성공했습니다',
+    });
   }
 };
 
 exports.changePassword = (req, res) => {
   if (req.session.user === undefined || req.session.user === null) {
-    res.status(401).send('로그인이 필요합니다.');
+    res.status(401).json({
+      message: '로그인이 필요합니다.',
+    });
   } else {
     accountModel
       .findOne({
@@ -139,7 +147,7 @@ exports.changePassword = (req, res) => {
           });
       })
       .catch((err) => {
-        res.status(400).send({
+        res.status(400).json({
           message: '비밀번호 변경에 실패했습니다',
           detail: err,
         });
@@ -157,7 +165,9 @@ exports.sendVerificationMail = (req, res) => {
     })
     .then((user) => {
       if (user === null) {
-        req.status(404).send('사용자를 찾을 수 없습니다.');
+        req.status(404).json({
+          message: '사용자를 찾을 수 없습니다.',
+        });
       } else {
         const validationToken = {
           token,

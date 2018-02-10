@@ -97,7 +97,9 @@ exports.getRecruitDetail = (req, res) => {
     })
     .then((retrieved) => {
       if (retrieved === null) {
-        res.status(404).send('구인 정보를 찾지 못했습니다.');
+        res.status(404).json({
+          message: '구인 정보를 찾지 못했습니다.',
+        });
       } else {
         res.json(retrieved);
       }
@@ -111,7 +113,9 @@ exports.getRecruitDetail = (req, res) => {
 
 exports.getRecruitBody = (req, res) => {
   if (req.session.user === undefined || req.session.user === null) {
-    res.status(401).send('로그인한 사용자만 조회할 수 있습니다.');
+    res.status(401).json({
+      message: '로그인한 사용자만 조회할 수 있습니다.',
+    });
   } else {
     recruitModel
       .findOne({
@@ -139,7 +143,9 @@ exports.getRecruitBody = (req, res) => {
               });
             });
         } else {
-          res.status(403).send('채택된 성우와 요청자만 볼 수 있습니다.');
+          res.status(403).json({
+            message: '채택된 성우와 요청자만 볼 수 있습니다.',
+          });
         }
       })
       .catch(() => {
@@ -158,7 +164,9 @@ exports.getRecruitSample = (req, res) => {
     })
     .then((retrieved) => {
       if (retrieved === null) {
-        res.status(404).send('구인 정보를 찾지 못했습니다');
+        res.status(404).json({
+          message: '구인 정보를 찾지 못했습니다',
+        });
       } else {
         res.json({
           message: '구인 상세 정보 조회에 성공했습니다.',
@@ -249,9 +257,13 @@ exports.createRecruit = (req, res) => {
 
 exports.cancelRecruit = (req, res) => {
   if (req.session.user === undefined || req.session.user === null) {
-    res.status(401).send('로그인한 사용자만 취소할 수 있습니다.');
+    res.status(401).json({
+      message: '로그인한 사용자만 취소할 수 있습니다.',
+    });
   } else if (req.session.user.type !== 'ACTOR') {
-    res.status(403).send('구인에 참여한 성우만 취소할 수 있습니다.');
+    res.status(403).json({
+      message: '구인에 참여한 성우만 취소할 수 있습니다.',
+    });
   } else {
     database
       .transaction()
@@ -264,10 +276,14 @@ exports.cancelRecruit = (req, res) => {
             const cannotCancelState = ['WAIT_FEEDBACK', 'ON_WITHDRAW', 'DONE'];
             if (retrieved.actor_id !== req.session.user.userId) {
               transaction.rollback();
-              res.status(403).send('구인에 참여한 성우만 취소할 수 있습니다.');
+              res.status(403).json({
+                message: '구인에 참여한 성우만 취소할 수 있습니다.',
+              });
             } else if (cannotCancelState.indexOf(retrieved.state) !== -1) {
               transaction.rollback();
-              res.status(412).send('요청을 취소할 수 없는 상태입니다.');
+              res.status(412).json({
+                message: '요청을 취소할 수 없는 상태입니다.',
+              });
             } else {
               transaction.commit();
               retrieved
