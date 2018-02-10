@@ -170,6 +170,8 @@ exports.getRecruitSample = (req, res) => {
     });
 };
 
+// TODO script paragraph 로 쪼개서 transaction 사용하여 db 에 밀어넣기
+
 exports.createRecruit = (req, res) => {
   if (req.session.user === undefined || req.session.user === null) {
     res.status(401).send('로그인한 사용자만 작성할 수 있습니다.');
