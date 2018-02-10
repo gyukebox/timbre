@@ -4,75 +4,69 @@ exports.getRandomRecruit = (req, res) => {
   const attributes = ['recruit_id', 'title', 'amount', 'category',
     'mood', 'recruit_due_date', 'process_due_date'];
   recruitModel
-    .findAndCountAll({
-      attributes,
-    })
-    .then((retrieved) => {
-      const max = retrieved.count;
-      const random = Math.floor(Math.random() * max);
-      res.json(retrieved.rows[random]);
+    .max('recruit_id')
+    .then((max) => {
+      const randomId = Math.floor(Math.random() * max);
+      recruitModel
+        .findOne({
+          where: { recruit_id: randomId },
+          attributes,
+        })
+        .then((retrieved) => {
+          res.json(retrieved);
+        })
+        .catch((err) => {
+          res.status(400).json({
+            message: '랜덤 구인 정보 조회에 실패했습니다',
+            detail: err,
+          });
+        });
     })
     .catch((err) => {
       res.status(400).json({
-        message: '랜덤 구인 정보 조회에 실패했습니다.',
+        message: '랜덤 구인 정보 조회에 실패했습니다',
         detail: err,
       });
     });
 };
 
 exports.getChartInfo = (req, res) => {
+  const response = {};
   const { query } = req;
   const attributes = ['recruit_id', 'title', 'amount', 'category',
     'mood', 'recruit_due_date', 'process_due_date'];
-  const response = {};
-
   query.active = true;
 
-  recruitModel
+  const mostExpensiveRecruits = recruitModel
     .findAll({
       where: query,
       attributes,
       order: [['amount', 'DESC']],
-    })
-    .then((retrieved) => {
-      response.prize = retrieved;
-    })
-    .catch((err) => {
-      res.status(400).json({
-        message: '차트 정보 조회에 실패했습니다.',
-        detail: err,
-      });
     });
 
-  recruitModel
+  const mostRecentRecruits = recruitModel
     .findAll({
       where: { active: true },
       attributes,
       order: [['created_at', 'DESC']],
-    })
-    .then((retrieved) => {
-      response.recent = retrieved;
-    })
-    .catch((err) => {
-      res.status(400).json({
-        message: '차트 정보 조회에 실패했습니다.',
-        detail: err,
-      });
     });
 
-  recruitModel
+  const mostImmediateRecruits = recruitModel
     .findAll({
       where: { active: true },
       attributes,
       order: [['recruit_due_date']],
-    })
+    });
+
+  Promise
+    .all([mostExpensiveRecruits, mostRecentRecruits, mostImmediateRecruits])
     .then((retrieved) => {
-      response.immediate = retrieved;
+      [response.prize, response.recent, response.immediate] = retrieved;
       res.json(response);
     })
     .catch((err) => {
       res.status(400).json({
-        message: '차트 정보 조회에 실패했습니다.',
+        message: '차트 정보 조회에 실패했습니다',
         detail: err,
       });
     });
