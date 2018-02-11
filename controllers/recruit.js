@@ -1,18 +1,26 @@
 const database = require('../models/database');
 const recruitModel = require('../models/recruit/recruit');
 const paragraphModel = require('../models/recruit/paragraph');
-
-const isBlank = value => value === undefined || value === null || String(value) <= 0;
+const { isBlank, isValidPageParameters } = require('../validation/validation');
 
 exports.getRecruitList = (req, res) => {
+  const { from, size } = req.params;
+
+  if (isValidPageParameters(from, size) === false) {
+    res.status(412).json({
+      message: '파라미터가 부족합니다.',
+    });
+    return;
+  }
+
   const attributes = [
     'recruit_id', 'title', 'amount', 'created_at',
     'category', 'mood', 'recruit_due_date', 'process_due_date',
     'bid_count', 'state', 'client_id', 'client_name',
   ];
   const order = [['recruit_id', 'DESC']];
-  const offset = req.query.from === undefined ? 0 : Number(req.query.from);
-  const limit = req.query.size === undefined ? 50 : Number(req.query.size);
+  const offset = req.query.from === undefined ? Number.MAX_VALUE : Number(from);
+  const limit = req.query.size === undefined ? 50 : Number(size);
 
   recruitModel
     .findAndCountAll({
@@ -43,23 +51,23 @@ exports.getRecruitList = (req, res) => {
 };
 
 exports.searchRecruits = (req, res) => {
+
+  const { from, size, query } = req.query;
+
   const attributes = [
     'recruit_id', 'title', 'amount', 'created_at',
     'category', 'mood', 'recruit_due_date', 'process_due_date',
     'bid_count', 'state', 'client_id', 'client_name',
   ];
   const order = [['recruit_id', 'DESC']];
-  const offset = req.query.from === undefined ? 0 : Number(req.query.from);
-  const limit = req.query.size === undefined ? 50 : Number(req.query.size);
-
-  const query = Object.assign({}, req.query);
-  query.active = true;
-  delete query.from;
-  delete query.size;
+  const offset = from === undefined ? 0 : Number(from);
+  const limit = size === undefined ? 50 : Number(size);
 
   recruitModel
     .findAndCountAll({
-      where: query,
+      where: {
+        query,
+      },
       attributes,
       order,
       offset,

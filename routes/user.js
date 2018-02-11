@@ -48,5 +48,6 @@ router.get('/:id/profile', profile.getProfileImage);
 router.put('/:id/profile', upload.single('profile'), profile.editProfileImage);
 router.put('/:id/introduction', profile.editIntroduction);
 router.get('/:id/recruits', profile.getRecruits);
+router.get('/:id/biddings', profile.getBiddings);
 
 module.exports = router;
