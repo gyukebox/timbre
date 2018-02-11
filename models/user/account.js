@@ -16,10 +16,6 @@ const columns = {
   password: {
     type: Sequelize.STRING(300),
     allowNull: false,
-    validate: {
-      len: [4, 16],
-      is: /[A - Z]+\w+\d+/,
-    },
   },
   bankType: {
     type: Sequelize.STRING(100),

@@ -194,11 +194,11 @@ exports.createRecruit = (req, res) => {
     const recruitDueDate = Date.now() + (1000 * 60 * 60 * 24 * req.body.recruit_duration);
     const processDueDate = recruitDueDate + (1000 * 60 * 60 * 24 * req.body.process_duration);
     const {
-      title, description, sample, script,
+      title, description, category, mood, amount, sample, script,
     } = req.body;
 
     // 검증
-    if (!Number.isInteger(req.body.amount) || Number(req.body.amount) <= 0 ||
+    if (!Number.isInteger(amount) || Number(amount) <= 0 ||
         isBlank(title) || title.length > 150 || isBlank(description) || title.length > 1000 ||
         isBlank(sample) || sample.length > 1000 || isBlank(script) || script.length > 8000) {
       res.status(412).json({
@@ -213,9 +213,9 @@ exports.createRecruit = (req, res) => {
       client_name: req.session.user.name,
       title,
       description,
-      category: req.body.category,
-      mood: req.body.mood,
-      amount: Number(req.body.amount) * 10000,
+      category,
+      mood,
+      amount: Number(amount) * 10000,
       process_due_date: processDueDate,
       recruit_due_date: recruitDueDate,
       sample,
@@ -237,16 +237,25 @@ exports.createRecruit = (req, res) => {
             paragraphModel
               .bulkCreate(paragraphAttributes, { transaction })
               .then(() => {
+                transaction.commit();
+
                 res.status(201).json({
                   message: '구인 정보 추가에 성공했습니다!',
                   detail: created,
                 });
               })
               .catch(() => {
+                transaction.rollback();
                 res.status(400).json({
                   message: '구인 정보 추가에 실패했습니다.',
                 });
               });
+          })
+          .catch(() => {
+            transaction.rollback();
+            res.status(400).json({
+              message: '구인 정보 추가에 실패했습니다.',
+            });
           });
       })
       .catch(() => {

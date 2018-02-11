@@ -6,6 +6,7 @@ const columns = {
   recruit_id: {
     type: sequelize.INTEGER,
     field: 'recruit_id',
+    primaryKey: true,
     references: {
       model: recruit,
       key: 'recruit_id',
@@ -14,10 +15,11 @@ const columns = {
   paragraph_number: {
     type: sequelize.INTEGER,
     field: 'paragraph_number',
+    primaryKey: true,
     allowNull: false,
   },
   content: {
-    type: sequelize.STRINT(2000),
+    type: sequelize.STRING(2000),
     field: 'content',
     allowNull: false,
   },
@@ -27,6 +29,7 @@ const options = {
   tableName: 'paragraphs',
   freezeTableName: true,
   underscored: true,
+  timestamps: false,
 };
 
 const paragraphModel = database.define('paragraphs', columns, options);

@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
 
-export.smtp = nodemailer.createTransport({
+exports.smtp = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: 'timbredeveloper@gmail.com',
