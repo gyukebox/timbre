@@ -1,7 +1,7 @@
 const database = require('../models/database');
 const recruitModel = require('../models/recruit/recruit');
 const paragraphModel = require('../models/recruit/paragraph');
-const { isBlank, isValidPageParameters } = require('../validation/validation');
+const { isBlank, isValidPageParameters, isScriptsReadableForActor } = require('../validation/validation');
 
 exports.getRecruitList = (req, res) => {
   const { from, size } = req.params;
@@ -118,52 +118,53 @@ exports.getRecruitDetail = (req, res) => {
     });
 };
 
-// TODO : 조회에 권한 제한 추가할 것
-// 1. 요청자는 언제든 조회 가능
-// 2. 성우는 입찰된 대상만 조회 가능
 exports.getRecruitBody = (req, res) => {
   if (req.session.user === undefined || req.session.user === null) {
     res.status(401).json({
       message: '로그인한 사용자만 조회할 수 있습니다.',
     });
-  } else {
-    recruitModel
-      .findOne({
-        where: { recruit_id: req.params.id },
-        attributes: ['client_id', 'actor_id'],
-      })
-      .then((retrieved) => {
-        if (retrieved.client_id === req.session.user.userId || retrieved.actor_id === req.session.userId) {
-          const response = {
-            message: '구인 상세 정보 조회에 성공했습니다.',
-            paragraphs: [],
-          };
-
-          paragraphModel
-            .findAll({
-              where: { recruit_id: req.params.id },
-            })
-            .then((paragraphs) => {
-              response.paragraphs = paragraphs;
-              res.json(response);
-            })
-            .catch(() => {
-              res.status(400).json({
-                message: '구인 상세 정보 조회에 실패했습니다.',
-              });
-            });
-        } else {
-          res.status(403).json({
-            message: '채택된 성우와 요청자만 볼 수 있습니다.',
-          });
-        }
-      })
-      .catch(() => {
-        res.status(400).json({
-          message: '구인 상세 정보 조회에 실패했습니다.',
-        });
-      });
+    return;
   }
+
+  const { userId } = req.session.user;
+  const { id } = req.params;
+
+  recruitModel
+    .findOne({
+      where: { recruit_id: id },
+      attributes: ['client_id', 'actor_id'],
+    })
+    .then((retrieved) => {
+      if (retrieved.client_id === userId || (retrieved.actor_id === userId && isScriptsReadableForActor(retrieved.state))) {
+        const response = {
+          message: '구인 상세 정보 조회에 성공했습니다.',
+          paragraphs: [],
+        };
+
+        paragraphModel
+          .findAll({
+            where: { recruit_id: id },
+          })
+          .then((paragraphs) => {
+            response.paragraphs = paragraphs;
+            res.json(response);
+          })
+          .catch(() => {
+            res.status(400).json({
+              message: '구인 상세 정보 조회에 실패했습니다.',
+            });
+          });
+      } else {
+        res.status(403).json({
+          message: '채택된 성우와 요청자만 볼 수 있습니다.',
+        });
+      }
+    })
+    .catch(() => {
+      res.status(400).json({
+        message: '구인 상세 정보 조회에 실패했습니다.',
+      });
+    });
 };
 
 exports.getRecruitSample = (req, res) => {
