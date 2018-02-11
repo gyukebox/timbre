@@ -6,7 +6,7 @@ exports.getRandomRecruit = (req, res) => {
   recruitModel
     .max('recruit_id')
     .then((max) => {
-      const randomId = Math.floor(Math.random() * max);
+      const randomId = Math.floor(Math.random() * max) + 1;
       recruitModel
         .findOne({
           where: { recruit_id: randomId },
