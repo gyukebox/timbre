@@ -28,9 +28,17 @@ exports.validateEmail = (email) => {
   }
 };
 
+exports.validateUserType = (type) => {
+  if (type !== 'ACTOR' && type !== 'CLIENT') {
+    throw new ValidationError('올바른 사용자 타입이 아닙니다.');
+  }
+};
+
 exports.isBlank = value => value === undefined || value === null || String(value) <= 0;
 
 exports.isValidStatus = status => Object.prototype.hasOwnProperty.call(statusGroups, status);
 
 exports.isValidPageParameters = (from, size) => size === undefined || Number.isInteger(size) === false || Number(size) > 0 ||
     from === undefined || Number.isInteger(from) === false || Number(from) >= Number(size);
+
+exports.isBiddingAcceptableState = state => state === 'ON_BIDDINGS';

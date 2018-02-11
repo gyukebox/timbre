@@ -17,7 +17,7 @@ app.use(cookieParser());
 app.use(session(resources.session));
 
 app.use('/', require('./routes/index'));
-app.use('/biddings', require('./routes/bidding'));
+app.use('/bids', require('./routes/bidding'));
 app.use('/chart', require('./routes/chart'));
 app.use('/dashboard', require('./routes/dashboard'));
 app.use('/recruits', require('./routes/recruit'));

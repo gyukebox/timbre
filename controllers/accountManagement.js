@@ -6,7 +6,9 @@ const userModel = require('../models/user/user');
 const accountModel = require('../models/user/account');
 const { smtp } = require('../util/mailer');
 const { host } = require('../resources/index');
-const { validateUsername, validatePassword, validateEmail } = require('../validation/validation');
+const {
+  validateUsername, validatePassword, validateEmail, validateUserType, isBlank,
+} = require('../validation/validation');
 
 exports.join = (req, res) => {
   const {
@@ -18,6 +20,7 @@ exports.join = (req, res) => {
     validateUsername(username);
     validatePassword(password);
     validateEmail(mail);
+    validateUserType(type);
   } catch (error) {
     res.status(412).json({
       message: '회원가입 조건을 만족하지 않습니다.',
@@ -88,18 +91,16 @@ exports.join = (req, res) => {
                     });
 
                     res.status(201).json({
-                      message: '회원가입에 성공했습니다!',
+                      message: '회원가입에 성공했습니다.',
                     });
                   });
               })
-
               .catch(sequelize.ValidationError, () => {
                 transaction.rollback();
                 res.status(412).json({
                   message: '회원가입 조건을 만족하지 않습니다.',
                 });
               })
-
               .catch(() => {
                 transaction.rollback();
                 res.status(400).json({
@@ -115,7 +116,14 @@ exports.join = (req, res) => {
 };
 
 exports.login = (req, res) => {
-  const { mail } = req.body;
+  const { mail, password } = req.body;
+
+  if (isBlank(password)) {
+    res.status(412).json({
+      message: '로그인 정보가 올바르지 않습니다.'
+    });
+    return;
+  }
 
   userModel
     .findOne({
@@ -127,7 +135,7 @@ exports.login = (req, res) => {
     .then((user) => {
       if (user === null) {
         res.status(412).json({
-          message: '로그인 정보가 올바르지 않습니다',
+          message: '로그인 정보가 올바르지 않습니다.',
         });
         return;
       }
@@ -140,27 +148,27 @@ exports.login = (req, res) => {
         })
         .then((account) => {
           // 암호화 된 해시값 비교
-          if (bcrypt.compareSync(req.body.password, account.password)) {
+          if (bcrypt.compareSync(password, account.password)) {
             req.session.user = user;
             res.status(200).json({
-              message: '로그인에 성공했습니다',
+              message: '로그인에 성공했습니다.',
               user,
             });
           } else {
             res.status(401).json({
-              message: '로그인에 실패했습니다',
+              message: '로그인에 실패했습니다.',
             });
           }
         })
         .catch(() => {
           res.status(401).json({
-            message: '로그인에 실패했습니다',
+            message: '로그인에 실패했습니다.',
           });
         });
     })
     .catch(() => {
       res.status(401).json({
-        message: '로그인에 실패했습니다',
+        message: '로그인에 실패했습니다.',
       });
     });
 };
@@ -168,12 +176,12 @@ exports.login = (req, res) => {
 exports.logout = (req, res) => {
   if (req.session.user === undefined || req.session.user === null) {
     res.status(400).json({
-      message: '로그아웃에 실패했습니다',
+      message: '로그아웃에 실패했습니다.',
     });
   } else {
     req.session.user = undefined;
     res.status(204).json({
-      message: '로그아웃에 성공했습니다',
+      message: '로그아웃에 성공했습니다.',
     });
   }
 };
@@ -204,19 +212,25 @@ exports.changePassword = (req, res) => {
         },
       })
       .then((account) => {
-        account.update({
-          password: encoded,
-        })
+        account
+          .update({
+            password: encoded,
+          })
           .then((result) => {
             res.status(204).json({
-              message: '비밀번호 변경에 성공했습니다',
+              message: '비밀번호 변경에 성공했습니다.',
               user: result,
+            });
+          })
+          .catch(() => {
+            res.status(400).json({
+              message: '비밀번호 변경에 실패했습니다.',
             });
           });
       })
       .catch(() => {
         res.status(400).json({
-          message: '비밀번호 변경에 실패했습니다',
+          message: '비밀번호 변경에 실패했습니다.',
         });
       });
   }
@@ -230,9 +244,13 @@ exports.verifyEmail = (req, res) => {
     })
     .then((user) => {
       if (Date(user.expiry) < Date.now()) {
-        res.status(400).json({ message: '인증에 실패하였습니다' });
+        res.status(400).json({
+          message: '인증에 실패하였습니다.',
+        });
       } else {
-        res.json({ message: '인증에 성공하였습니다!' });
+        res.json({
+          message: '인증에 성공하였습니다.',
+        });
       }
     });
 };
