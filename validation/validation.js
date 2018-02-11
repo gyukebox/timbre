@@ -7,6 +7,15 @@ class ValidationError {
   }
 }
 
+const keys = Object.keys(statusGroups);
+let actorScriptsReadableStatus = [];
+for (let i = 0; i < keys.length; i++) {
+  const key = keys[i];
+  if (key !== 'wait') {
+    actorScriptsReadableStatus = actorScriptsReadableStatus.concat(statusGroups[key]);
+  }
+}
+
 exports.validateUsername = (username) => {
   const validPattern = /^[\w\d_]{10,100}$/;
   if (!validPattern.test(username)) {
@@ -42,3 +51,5 @@ exports.isValidPageParameters = (from, size) => size === undefined || Number.isI
     from === undefined || Number.isInteger(from) === false || Number(from) >= Number(size);
 
 exports.isBiddingAcceptableState = state => state === 'ON_BIDDINGS';
+
+exports.isScriptsReadableForActor = state => actorScriptsReadableStatus.indexOf(state) > -1;
