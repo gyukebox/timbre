@@ -8,7 +8,7 @@ exports.getRecruitList = (req, res) => {
 
   if (isValidPageParameters(from, size) === false) {
     res.status(412).json({
-      message: '파라미터가 부족합니다.',
+      message: '파라미터가 부적합합니다.',
     });
     return;
   }
@@ -19,8 +19,8 @@ exports.getRecruitList = (req, res) => {
     'bid_count', 'state', 'client_id', 'client_name',
   ];
   const order = [['recruit_id', 'DESC']];
-  const offset = req.query.from === undefined ? Number.MAX_VALUE : Number(from);
-  const limit = req.query.size === undefined ? 50 : Number(size);
+  const offset = from === undefined ? 0 : Number(from);
+  const limit = size === undefined ? 50 : Number(size);
 
   recruitModel
     .findAndCountAll({
@@ -51,7 +51,6 @@ exports.getRecruitList = (req, res) => {
 };
 
 exports.searchRecruits = (req, res) => {
-
   const { from, size, query } = req.query;
 
   const attributes = [
@@ -114,11 +113,14 @@ exports.getRecruitDetail = (req, res) => {
     })
     .catch(() => {
       res.status(400).json({
-        message: '구인 정보 조회에 실패했습니다',
+        message: '구인 정보 조회에 실패했습니다.',
       });
     });
 };
 
+// TODO : 조회에 권한 제한 추가할 것
+// 1. 요청자는 언제든 조회 가능
+// 2. 성우는 입찰된 대상만 조회 가능
 exports.getRecruitBody = (req, res) => {
   if (req.session.user === undefined || req.session.user === null) {
     res.status(401).json({
@@ -173,7 +175,7 @@ exports.getRecruitSample = (req, res) => {
     .then((retrieved) => {
       if (retrieved === null) {
         res.status(404).json({
-          message: '구인 정보를 찾지 못했습니다',
+          message: '구인 정보를 찾지 못했습니다.',
         });
       } else {
         res.json({
@@ -184,7 +186,7 @@ exports.getRecruitSample = (req, res) => {
     })
     .catch(() => {
       res.status(400).json({
-        message: '구인 상세 정보 조회에 성공했습니다',
+        message: '구인 상세 정보 조회에 실패했습니다.',
       });
     });
 };
@@ -210,7 +212,7 @@ exports.createRecruit = (req, res) => {
         isBlank(title) || title.length > 150 || isBlank(description) || title.length > 1000 ||
         isBlank(sample) || sample.length > 1000 || isBlank(script) || script.length > 8000) {
       res.status(412).json({
-        message: '파라미터가 부족합니다.',
+        message: '파라미터가 부적합합니다.',
       });
 
       return;
@@ -248,7 +250,7 @@ exports.createRecruit = (req, res) => {
                 transaction.commit();
 
                 res.status(201).json({
-                  message: '구인 정보 추가에 성공했습니다!',
+                  message: '구인 정보 추가에 성공했습니다.',
                   detail: created,
                 });
               })
@@ -292,7 +294,7 @@ exports.cancelRecruit = (req, res) => {
             where: { recruit_id: req.params.id },
           })
           .then((retrieved) => {
-            const cannotCancelState = ['WAIT_FEEDBACK', 'ON_WITHDRAW', 'DONE'];
+            const cannotCancelState = ['WAIT_FEEDBACK', 'ON_WITHDRAW', 'DONE', 'CANCELLED'];
             if (retrieved.actor_id !== req.session.user.userId) {
               transaction.rollback();
               res.status(403).json({

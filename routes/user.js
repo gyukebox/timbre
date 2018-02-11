@@ -1,19 +1,22 @@
 const express = require('express');
 const path = require('path');
+const uuid = require('uuid/v4');
 const multer = require('multer');
 const account = require('../controllers/accountManagement');
 const profile = require('../controllers/profile');
 
 const router = express.Router();
+const extentionPattern = /(?:\.([^.]+))?$/;
 
-// file upload configuration
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, callback) => {
-      callback(null, path.join(path.join(path.dirname(__dirname), '/public'), '/profiles'));
+      callback(null, path.join(__dirname, '../public', '/profiles'));
     },
     filename: (req, file, callback) => {
-      callback(null, file.originalname);
+      const filename = uuid();
+      const extension = extentionPattern.exec(file.originalname)[1];
+      callback(null, `${filename}.${extension}`);
     },
   }),
 });

@@ -15,17 +15,15 @@ exports.getRandomRecruit = (req, res) => {
         .then((retrieved) => {
           res.json(retrieved);
         })
-        .catch((err) => {
+        .catch(() => {
           res.status(400).json({
-            message: '랜덤 구인 정보 조회에 실패했습니다',
-            detail: err,
+            message: '랜덤 구인 정보 조회에 실패했습니다.',
           });
         });
     })
-    .catch((err) => {
+    .catch(() => {
       res.status(400).json({
-        message: '랜덤 구인 정보 조회에 실패했습니다',
-        detail: err,
+        message: '랜덤 구인 정보 조회에 실패했습니다.',
       });
     });
 };
@@ -66,7 +64,7 @@ exports.getChartInfo = (req, res) => {
     })
     .catch((err) => {
       res.status(400).json({
-        message: '차트 정보 조회에 실패했습니다',
+        message: '차트 정보 조회에 실패했습니다.',
         detail: err,
       });
     });
