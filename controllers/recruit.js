@@ -300,19 +300,23 @@ exports.cancelRecruit = (req, res) => {
               });
             } else if (cannotCancelState.indexOf(retrieved.state) !== -1) {
               transaction.rollback();
-              res.status(412).json({
+              res.status(400).json({
                 message: '요청을 취소할 수 없는 상태입니다.',
               });
             } else {
-              transaction.commit();
               retrieved
                 .update({
                   state: 'CANCELLED',
                   active: false,
-                }).then((result) => {
-                  res.status(204).json({
-                    message: '구인 취소에 성공했습니다.',
-                    detail: result,
+                }, { transaction })
+                .then(() => {
+                  transaction.commit();
+                  res.status(204).send();
+                })
+                .catch(() => {
+                  transaction.rollback();
+                  res.status(400).json({
+                    message: '구인 취소에 실패했습니다.',
                   });
                 });
             }
