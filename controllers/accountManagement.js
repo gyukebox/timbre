@@ -6,34 +6,7 @@ const userModel = require('../models/user/user');
 const accountModel = require('../models/user/account');
 const { smtp } = require('../util/mailer');
 const { host } = require('../resources/index');
-
-class ValidationError {
-  constructor(message) {
-    this.name = 'ValidationError';
-    this.message = message;
-  }
-}
-
-const validateUsername = (username) => {
-  const validPattern = /^[\w\d_]{10,100}$/;
-  if (!validPattern.test(username)) {
-    throw new ValidationError('올바른 닉네임 패턴이 아닙니다.');
-  }
-};
-
-const validatePassword = (password) => {
-  const validPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z_\-\d!@#$%^&*()]{10,100}$/;
-  if (!validPattern.test(password)) {
-    throw new ValidationError('올바른 패스워드 패턴이 아닙니다.');
-  }
-};
-
-function validateEmail(email) {
-  const validPattern = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-  if (!validPattern.test(email)) {
-    throw new ValidationError('올바른 이메일 패턴이 아닙니다.');
-  }
-}
+const { validateUsername, validatePassword, validateEmail } = require('../validation/validation');
 
 exports.join = (req, res) => {
   const {

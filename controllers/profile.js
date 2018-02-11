@@ -1,4 +1,8 @@
+const sequelize = require('sequelize');
 const userModel = require('../models/user/user');
+const recruitModel = require('../models/recruit/recruit');
+const { isValidStatus, isValidPageParameters } = require('../validation/validation');
+const { statusGroups } = require('../enum/enum');
 
 exports.getProfile = (req, res) => {
   userModel
@@ -30,11 +34,13 @@ exports.getProfileImage = (req, res) => {
         res.status(404).json({
           message: '사용자를 찾을 수 없습니다',
         });
+      } else if (result.profile === undefined || result.profile === null) {
+        res.status(204).send();
       } else {
-        res.json(result);
+        res.sendFile(result.profile);
       }
     })
-    .catch((err) => {
+    .catch(() => {
       res.status(400).json({
         message: '프로필 조회에 실패했습니다',
       });
@@ -43,7 +49,7 @@ exports.getProfileImage = (req, res) => {
 
 exports.editProfileImage = (req, res) => {
   if (req.session.user === null || req.session.user === undefined) {
-    res.status(403).json({
+    res.status(401).json({
       message: '로그인이 필요합니다.',
     });
   } else if (req.session.user.userId.toString() !== req.params.id) {
@@ -74,7 +80,9 @@ exports.editProfileImage = (req, res) => {
 };
 
 exports.editIntroduction = (req, res) => {
-  if (req.body.introduction === undefined) {
+  const { introduction } = req.body;
+
+  if (introduction === undefined || introduction === null || introduction.length <= 0) {
     res.status(412).json({
       message: '파라미터가 부족합니다',
     });
@@ -110,9 +118,82 @@ exports.editIntroduction = (req, res) => {
   }
 };
 
+const checkAndDoWithPagination = (req, res, type) => {
+  const { status, from, size } = req.query;
+
+  if (req.session.user === null || req.session.user === undefined) {
+    res.status(401).json({
+      message: '로그인이 필요합니다.',
+    });
+  } else if (req.session.user.type !== type) {
+    res.status(403).json({
+      message: '조회 불가능한 유형의 계정입니다.',
+    });
+  } else if (isValidStatus(status) === false || isValidPageParameters(from, size) === false) {
+    res.status(412).json({
+      message: '파라미터가 부족합니다.',
+    });
+  } else {
+    const statusGroup = statusGroups[status];
+    const order = [['recruit_id', 'DESC']];
+    const offset = from === undefined ? 0 : Number(from);
+    const limit = size === undefined ? 50 : Number(size);
+    const { userId } = req.session.user;
+
+    const attributes = [
+      'recruit_id', 'title', 'amount', 'created_at',
+      'category', 'mood', 'recruit_due_date', 'process_due_date',
+      'bid_count', 'state', 'client_id', 'client_name',
+    ];
+
+    const query = {
+      active: true,
+      state: {
+        [sequelize.Op.or]: statusGroup,
+      },
+    };
+
+    if (type === 'ACTOR') {
+      query.actor_id = userId;
+    } else {
+      query.client_id = userId;
+    }
+
+    recruitModel
+      .findAndCountAll({
+        where: query,
+        attributes,
+        order,
+        offset,
+        limit,
+      })
+      .then((retrieved) => {
+        const total = retrieved.count;
+        const response = {
+          pages: {
+            total,
+            from: offset,
+            size: retrieved.rows.length,
+            has_next: (total > offset + limit),
+          },
+          recruits: retrieved.rows,
+        };
+        res.json(response);
+      })
+      .catch(() => {
+        res.status(400).json({
+          message: '구인 목록 조회에 실패했습니다.',
+        });
+      });
+  }
+};
+
 exports.getRecruits = (req, res) => {
-  res.json({
-    status: 'not implemented!',
-  });
+  checkAndDoWithPagination(req, res, 'CLIENT');
+};
+
+
+exports.getBiddings = (req, res) => {
+  checkAndDoWithPagination(req, res, 'ACTOR');
 };
 
