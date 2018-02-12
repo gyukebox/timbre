@@ -6,7 +6,7 @@ const account = require('../controllers/accountManagement');
 const profile = require('../controllers/profile');
 
 const router = express.Router();
-const extentionPattern = /(?:\.([^.]+))?$/;
+const extensionPattern = /(?:\.([^.]+))?$/;
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -15,7 +15,7 @@ const upload = multer({
     },
     filename: (req, file, callback) => {
       const filename = uuid();
-      const extension = extentionPattern.exec(file.originalname)[1];
+      const extension = extensionPattern.exec(file.originalname)[1];
       callback(null, `${filename}.${extension}`);
     },
   }),
@@ -43,7 +43,6 @@ router.post('/join', upload.single('profile'), account.join);
 router.post('/login', account.login);
 router.post('/logout', account.logout);
 router.post('/change_password', account.changePassword);
-router.get('/:id/auth_email', account.verifyEmail);
 
 // 프로필
 router.get('/:id', profile.getProfile);

@@ -120,7 +120,7 @@ exports.login = (req, res) => {
 
   if (isBlank(password)) {
     res.status(412).json({
-      message: '로그인 정보가 올바르지 않습니다.'
+      message: '로그인 정보가 올바르지 않습니다.',
     });
     return;
   }
@@ -239,19 +239,40 @@ exports.changePassword = (req, res) => {
 exports.verifyEmail = (req, res) => {
   userModel
     .findOne({
-      attributes: ['token', 'expiry'],
-      where: { token: req.params.token },
+      attributes: ['userId', 'authorized', 'token', 'expiry'],
+      where: { token: req.query.token },
     })
     .then((user) => {
-      if (Date(user.expiry) < Date.now()) {
+      const now = new Date();
+      if (user.expiry < now || user.authorized !== undefined || user.authorized !== null) {
         res.status(400).json({
           message: '인증에 실패하였습니다.',
         });
       } else {
-        res.json({
-          message: '인증에 성공하였습니다.',
-        });
+        const attributes = { authenticated: now };
+        const options = {
+          where: {
+            userId: user.userId,
+          },
+        };
+        userModel
+          .update(attributes, options)
+          .then(() => {
+            res.json({
+              message: '인증에 성공하였습니다.',
+            });
+          })
+          .catch(() => {
+            res.status(400).json({
+              message: '인증에 실패했습니다.',
+            });
+          });
       }
+    })
+    .catch(() => {
+      res.status(400).json({
+        message: '인증에 실패했습니다.',
+      });
     });
 };
 
