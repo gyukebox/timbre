@@ -208,6 +208,21 @@ exports.createRecruit = (req, res) => {
       title, description, category, mood, amount, sample, script,
     } = req.body;
 
+    const paragraphs = script.split('\n\n');
+    const paragraphAttributes = paragraphs.map((paragraph, index) => ({
+      paragraph_number: index + 1,
+      content: paragraph,
+    }));
+
+    for (let i = 0; i < paragraphAttributes.length; i++) {
+      if (paragraphAttributes[i].content.length > 8000) {
+        res.status(412).json({
+          message: '로그인한 사용자만 작성할 수 있습니다.',
+        });
+        return;
+      }
+    }
+
     // 검증
     if (!Number.isInteger(amount) || Number(amount) <= 0 ||
         isBlank(title) || title.length > 150 || isBlank(description) || title.length > 1000 ||
@@ -238,13 +253,7 @@ exports.createRecruit = (req, res) => {
         recruitModel
           .create(recruitAttributes, { transaction })
           .then((created) => {
-            const paragraphs = script.split('\n\n');
-            const paragraphAttributes = paragraphs.map((paragraph, index) => ({
-              recruit_id: created.recruit_id,
-              paragraph_number: index + 1,
-              content: paragraph,
-            }));
-
+            paragraphAttributes.recruit_id = created.recruit_id;
             paragraphModel
               .bulkCreate(paragraphAttributes, { transaction })
               .then(() => {
