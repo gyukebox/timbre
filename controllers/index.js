@@ -28,12 +28,28 @@ exports.getRandomRecruit = (req, res) => {
     });
 };
 
+const categories = ['narration', 'dubbing', 'book', 'advertisement', 'ars', 'etc'];
+
 exports.getChartInfo = (req, res) => {
   const response = {};
-  const { query } = req;
-  const attributes = ['recruit_id', 'title', 'amount', 'category',
-    'mood', 'recruit_due_date', 'process_due_date'];
-  query.active = true;
+  const { active, category } = req.query;
+  const attributes = ['recruit_id', 'title', 'amount', 'category', 'mood', 'recruit_due_date', 'process_due_date'];
+
+  const query = {
+    active,
+  };
+
+  if (category !== undefined && category !== null) {
+
+    if (categories.indexOf(category) > -1) {
+      query.category = category;
+    } else {
+      res.status(412).json({
+        message: '파라미터가 부적합합니다.',
+      });
+      return;
+    }
+  }
 
   const mostExpensiveRecruits = recruitModel
     .findAll({
