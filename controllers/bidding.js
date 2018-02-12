@@ -2,6 +2,7 @@ const duration = require('mp3-duration');
 const database = require('../models/database');
 const bidModel = require('../models/recruit/bidding');
 const recruitModel = require('../models/recruit/recruit');
+const versionModel = require('../models/recruit/version/version');
 const { isValidPageParameters, isBiddingAcceptableState } = require('../validation/validation');
 
 const buildBiddingsApiResult = item => ({
@@ -91,15 +92,29 @@ exports.acceptBidding = (req, res) => {
                     actor_id: bid.actor_id,
                     actor_name: bid.user_name,
                     state: 'WAIT_FEEDBACK',
+                    current_version: 1,
                   }, { transaction })
                   .then(() => {
-                    transaction.commit();
-                    res.status(200).json({
-                      message: '입찰에 성공했습니다.',
-                    });
+                    const attributes = {
+                      recruit_id: recruit.recruit_id,
+                      version: 1,
+                    };
+                    versionModel
+                      .create(attributes, { transaction })
+                      .then(() => {
+                        transaction.commit();
+                        res.status(200).json({
+                          message: '입찰에 성공했습니다.',
+                        });
+                      })
+                      .catch(() => {
+                        transaction.rollback();
+                        res.status(400).json({
+                          message: '입찰에 실패했습니다.',
+                        });
+                      });
                   })
-                  .catch((err) => {
-                    console.log(err);
+                  .catch(() => {
                     transaction.rollback();
                     res.status(400).json({
                       message: '입찰에 실패했습니다.',
@@ -107,24 +122,21 @@ exports.acceptBidding = (req, res) => {
                   });
               }
             })
-            .catch((err) => {
-              console.log(err);
+            .catch(() => {
               transaction.rollback();
               res.status(400).json({
                 message: '입찰에 실패했습니다.',
               });
             });
         })
-        .catch((err) => {
-          console.log(err);
+        .catch(() => {
           transaction.rollback();
           res.status(400).json({
             message: '입찰에 실패했습니다.',
           });
         });
     })
-    .catch((err) => {
-      console.log(err);
+    .catch(() => {
       res.status(400).json({
         message: '입찰에 실패했습니다.',
       });

@@ -19,7 +19,7 @@ const columns = {
     allowNull: false,
   },
   content: {
-    type: sequelize.STRING(2000),
+    type: sequelize.STRING(16000),
     field: 'content',
     allowNull: false,
   },
