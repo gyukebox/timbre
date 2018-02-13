@@ -53,8 +53,7 @@ exports.getRecruitBiddings = (req, res) => {
       };
       res.json(response);
     })
-    .catch((err) => {
-      console.log(err);
+    .catch(() => {
       res.status(400).json({
         message: '입찰 정보를 조회하는데 실패했습니다.',
       });
@@ -72,7 +71,7 @@ exports.acceptBidding = (req, res) => {
             .findOne({
               where: {
                 active: true,
-                recruit_id: bid.recruit_id,
+                recruitId: bid.recruitId,
               },
             })
             .then((recruit) => {
@@ -89,14 +88,14 @@ exports.acceptBidding = (req, res) => {
               } else {
                 recruit
                   .update({
-                    actor_id: bid.actor_id,
-                    actor_name: bid.user_name,
+                    actorId: bid.actorId,
+                    actorName: bid.userName,
                     state: 'WAIT_FEEDBACK',
-                    current_version: 1,
+                    currentVersion: 1,
                   }, { transaction })
                   .then(() => {
                     const attributes = {
-                      recruit_id: recruit.recruit_id,
+                      recruitId: recruit.recruitId,
                       version: 1,
                     };
                     versionModel
@@ -158,7 +157,7 @@ exports.createBidding = (req, res) => {
 
   if (type !== 'ACTOR') {
     res.status(403).json({
-      message: '제작자는 입찰에 참여할 수 없습니다.',
+      message: '요청자는 입찰에 참여할 수 없습니다.',
     });
     return;
   }
@@ -169,7 +168,7 @@ exports.createBidding = (req, res) => {
       recruitModel
         .findOne({
           where: {
-            recruit_id: id,
+            recruitId: id,
           },
         })
         .then((recruit) => {
@@ -183,7 +182,7 @@ exports.createBidding = (req, res) => {
           bidModel
             .findOne({
               where: {
-                actor_id: userId,
+                actorId: userId,
               },
             })
             .then((bid) => {
@@ -201,8 +200,8 @@ exports.createBidding = (req, res) => {
                     });
                   } else {
                     const attributes = {
-                      actor_id: userId,
-                      recruit_id: recruit.recruit_id,
+                      actorId: userId,
+                      recruitId: recruit.recruitId,
                       username: name,
                       title,
                       description,

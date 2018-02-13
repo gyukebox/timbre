@@ -92,7 +92,7 @@ exports.editProfileImage = (req, res) => {
 exports.editIntroduction = (req, res) => {
   const { introduction } = req.body;
 
-  if (introduction === undefined || introduction === null || introduction.length <= 0) {
+  if (introduction === undefined || introduction === null || introduction.length > 1000) {
     res.status(412).json({
       message: '파라미터가 부적합합니다.',
     });

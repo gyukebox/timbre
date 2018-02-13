@@ -4,13 +4,13 @@ const database = require('../database');
 const user = require('../user/user');
 
 const columns = {
-  recruit_id: {
+  recruitId: {
     type: sequelize.INTEGER,
     field: 'recruit_id',
     primaryKey: true,
     autoIncrement: true,
   },
-  client_id: {
+  clientId: {
     type: sequelize.INTEGER,
     field: 'client_id',
     references: {
@@ -18,16 +18,16 @@ const columns = {
       key: 'user_id',
     },
   },
-  client_name: {
+  clientName: {
     type: sequelize.STRING(100),
     field: 'client_name',
   },
-  actor_id: {
+  actorId: {
     type: sequelize.INTEGER,
     field: 'actor_id',
     allowNull: true,
   },
-  actor_name: {
+  actorName: {
     type: sequelize.STRING(100),
     field: 'actor_name',
     allowNull: true,
@@ -51,31 +51,31 @@ const columns = {
     type: sequelize.BOOLEAN,
     defaultValue: true,
   },
-  bid_count: {
+  bidCount: {
     type: sequelize.INTEGER,
     field: 'bid_count',
     defaultValue: 0,
   },
-  bidding_id: {
+  biddingId: {
     type: sequelize.INTEGER,
     field: 'bidding_id',
     allowNull: true,
   },
-  version_count: {
+  versionCount: {
     type: sequelize.INTEGER,
     field: 'version_count',
     defaultValue: 0,
   },
-  current_version: {
+  currentVersion: {
     type: sequelize.INTEGER,
     field: 'current_version',
     defaultValue: 0,
   },
-  process_due_date: {
+  processDueDate: {
     type: sequelize.DATE,
     field: 'process_due_date',
   },
-  recruit_due_date: {
+  recruitDueDate: {
     type: sequelize.DATE,
     field: 'recruit_due_date',
   },
@@ -91,7 +91,7 @@ const options = {
   underscored: true,
 };
 
-const recruitModel = database.define('recruit', columns, options);
+const recruitModel = database.define('recruits', columns, options);
 recruitModel.belongsTo(user, { foreignKey: 'client_id' });
 
 module.exports = recruitModel;

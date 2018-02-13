@@ -1,6 +1,10 @@
+/* eslint-disable camelcase */
+const duration = require('mp3-duration');
 const database = require('../models/database');
 const recruitModel = require('../models/recruit/recruit');
 const paragraphModel = require('../models/recruit/paragraph');
+const versionModel = require('../models/recruit/version/version');
+const recordingModel = require('../models/recruit/version/recording/recording');
 const { isBlank, isValidPageParameters, isScriptsReadableForActor } = require('../validation/validation');
 
 exports.getRecruitList = (req, res) => {
@@ -143,7 +147,7 @@ exports.getRecruitBody = (req, res) => {
 
         paragraphModel
           .findAll({
-            where: { recruit_id: id },
+            where: { recruitId: id },
           })
           .then((paragraphs) => {
             response.paragraphs = paragraphs;
@@ -210,7 +214,7 @@ exports.createRecruit = (req, res) => {
 
     const paragraphs = script.split('\n\n');
     const paragraphAttributes = paragraphs.map((paragraph, index) => ({
-      paragraph_number: index + 1,
+      paragraphNumber: index + 1,
       content: paragraph,
     }));
 
@@ -235,15 +239,15 @@ exports.createRecruit = (req, res) => {
     }
 
     const recruitAttributes = {
-      client_id: req.session.user.userId,
-      client_name: req.session.user.name,
+      clientId: req.session.user.userId,
+      clientName: req.session.user.name,
       title,
       description,
       category,
       mood,
       amount: Number(amount) * 10000,
-      process_due_date: processDueDate,
-      recruit_due_date: recruitDueDate,
+      processDueDate,
+      recruitDueDate,
       sample,
     };
 
@@ -253,7 +257,9 @@ exports.createRecruit = (req, res) => {
         recruitModel
           .create(recruitAttributes, { transaction })
           .then((created) => {
-            paragraphAttributes.recruit_id = created.recruit_id;
+            for (let i = 0; i < paragraphAttributes.length; i++) {
+              paragraphAttributes[i].recruitId = created.recruitId;
+            }
             paragraphModel
               .bulkCreate(paragraphAttributes, { transaction })
               .then(() => {
@@ -343,6 +349,236 @@ exports.cancelRecruit = (req, res) => {
       .catch(() => {
         res.status(400).json({
           message: '구인 취소에 실패했습니다.',
+        });
+      });
+  }
+};
+
+exports.getAllVersions = (req, res) => {
+  const { id } = req.params;
+  recruitModel
+    .findOne({
+      where: {
+        recruitId: id,
+      },
+    })
+    .then((recruit) => {
+      if (!recruit) {
+        res.status(404).json({
+          message: '구인 내용을 찾을 수 없습니다.',
+        });
+      } else {
+        const response = [];
+        for (let i = 0; i < recruit.currentVersion; i++) {
+          response.push({
+            version: i + 1,
+            latest: recruit.currentVersion === i + 1,
+          });
+        }
+        res.json(response);
+      }
+    })
+    .catch(() => {
+      res.status(400).json({
+        message: '버전 조회에 실패했습니다.',
+      });
+    });
+};
+
+exports.getCurrentVersion = (req, res) => {
+  const { id } = req.params;
+
+  if (req.session.user === undefined || req.session.user === null) {
+    res.status(401).json({
+      message: '로그인한 사용자만 조회할 수 있습니다.',
+    });
+  } else {
+    const { userId } = req.session.user;
+    recruitModel
+      .findOne({
+        where: {
+          recruitId: id,
+        },
+      })
+      .then((recruit) => {
+        if (!recruit) {
+          res.status(404).json({
+            message: '구인 내용을 찾을 수 없습니다.',
+          });
+        } else if (recruit.clientId === userId || recruit.actorId === userId) {
+          paragraphModel
+            .findAll({
+              where: {
+                recruitId: id,
+              },
+            })
+            .then((paragraphs) => {
+              if (!paragraphs) {
+                res.status(400).json({
+                  message: '버전 조회에 실패했습니다.',
+                });
+              } else {
+                versionModel
+                  .findOne({
+                    where: {
+                      recruitId: id,
+                      version: recruit.currentVersion,
+                    },
+                  })
+                  .then((version) => {
+                    // TODO : paragraph 데이터 가공 과정 구현 - 피드백 추가
+                    res.json({
+                      version: {
+                        version: version.version,
+                        created: version.createdAt,
+                        paragraphs,
+                        client: {
+                          clientId: recruit.clientId,
+                          username: recruit.clientName,
+                        },
+                      },
+                    });
+                  })
+                  .catch(() => {
+                    res.status(400).json({
+                      message: '버전 조회에 실패했습니다.',
+                    });
+                  });
+              }
+            })
+            .catch(() => {
+              res.status(400).json({
+                message: '버전 조회에 실패했습니다.',
+              });
+            });
+        } else {
+          res.status(403).json({
+            message: '요청자와 성우만 접근 가능합니다.',
+          });
+        }
+      })
+      .catch(() => {
+        res.status(400).json({
+          message: '버전 조회에 실패했습니다.',
+        });
+      });
+  }
+};
+
+exports.getParagraphFile = (req, res) => {
+  const { recruit_id, version_no, paragraph_no } = req.params;
+  if (req.session.user === undefined || req.session.user === null) {
+    res.status(401).json({
+      message: '로그인한 사용자만 조회할 수 있습니다.',
+    });
+  } else {
+    const { userId } = req.session.user;
+    recruitModel
+      .findOne({
+        where: {
+          recruitId: recruit_id,
+        },
+      })
+      .then((recruit) => {
+        if (!recruit) {
+          res.status(404).json({
+            message: '구인 내용을 찾을 수 없습니다.',
+          });
+        } else if (recruit.clientId === userId || recruit.actorId === userId) {
+          recordingModel
+            .findOne({
+              where: {
+                recruitId: recruit_id,
+                version: version_no,
+                paragraphNumber: paragraph_no,
+              },
+            })
+            .then((recording) => {
+              if (!recording || isBlank(recording.fileUrl)) {
+                res.status(404).json({
+                  message: '대상을 찾을 수 없습니다.',
+                });
+              } else {
+                res.sendFile(recording.fileUrl);
+              }
+            })
+            .catch((err) => {
+              console.log(err);
+              res.status(400).json({
+                message: '대상을 조회하는데 실패했습니다.',
+              });
+            });
+        } else {
+          res.status(403).json({
+            message: '요청자와 성우만 접근 가능합니다.',
+          });
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+        res.status(400).json({
+          message: '대상을 조회하는데 실패했습니다.',
+        });
+      });
+  }
+};
+
+exports.putParagraphFile = (req, res) => {
+  const { recruit_id, version_no, paragraph_no } = req.params;
+  const { path } = req.file;
+  if (req.session.user === undefined || req.session.user === null) {
+    res.status(401).json({
+      message: '로그인한 사용자만 조회할 수 있습니다.',
+    });
+  } else {
+    const { userId } = req.session.user;
+    recruitModel
+      .findOne({
+        where: {
+          recruitId: recruit_id,
+        },
+      })
+      .then((recruit) => {
+        if (!recruit) {
+          res.status(404).json({
+            message: '구인 내용을 찾을 수 없습니다.',
+          });
+        } else if (recruit.actorId === userId) {
+          duration(path, (err, length) => {
+            if (length < 3) {
+              res.status(412).json({
+                message: '3초 이하의 파일은 올릴 수 없습니다.',
+              });
+            } else {
+              recordingModel
+                .create({
+                  recruitId: recruit_id,
+                  version: version_no,
+                  paragraphNumber: paragraph_no,
+                  fileUrl: path,
+                  fileLength: length,
+                })
+                .then(() => {
+                  res.status(204).json({
+                    message: '녹음 파일을 성공적으로 올렸습니다.',
+                  });
+                })
+                .catch(() => {
+                  res.status(400).json({
+                    message: '녹음 파일을 올리는데 실패했습니다.',
+                  });
+                });
+            }
+          });
+        } else {
+          res.status(403).json({
+            message: '채택된 성우만 접근 가능합니다.',
+          });
+        }
+      })
+      .catch(() => {
+        res.status(400).json({
+          message: '녹음 파일을 올리는데 실패했습니다.',
         });
       });
   }
