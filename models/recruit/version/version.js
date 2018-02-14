@@ -27,7 +27,6 @@ const columns = {
     type: sequelize.DATE,
     field: 'created_at',
     allowNull: false,
-    defaultValue: Date.now(),
   },
 };
 

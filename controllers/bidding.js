@@ -97,6 +97,7 @@ exports.acceptBidding = (req, res) => {
                     const attributes = {
                       recruitId: recruit.recruitId,
                       version: 1,
+                      createdAt: Date.now(),
                     };
                     versionModel
                       .create(attributes, { transaction })
