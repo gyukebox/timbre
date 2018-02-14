@@ -406,8 +406,10 @@ exports.getCurrentVersion = (req, res) => {
             message: '구인 내용을 찾을 수 없습니다.',
           });
         } else if (recruit.clientId === userId || recruit.actorId === userId) {
+          const attributes = ['recruit_id', 'paragraph_number', 'content'];
           paragraphModel
             .findAll({
+              attributes,
               where: {
                 recruitId: id,
               },
