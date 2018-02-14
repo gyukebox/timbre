@@ -5,6 +5,7 @@ const recruitModel = require('../models/recruit/recruit');
 const paragraphModel = require('../models/recruit/paragraph');
 const versionModel = require('../models/recruit/version/version');
 const recordingModel = require('../models/recruit/version/recording/recording');
+const feedbackModel = require('../models/recruit/version/recording/feedback');
 const { isBlank, isValidPageParameters, isScriptsReadableForActor } = require('../validation/validation');
 
 exports.getRecruitList = (req, res) => {
@@ -504,8 +505,7 @@ exports.getParagraphFile = (req, res) => {
                 res.sendFile(recording.fileUrl);
               }
             })
-            .catch((err) => {
-              console.log(err);
+            .catch(() => {
               res.status(400).json({
                 message: '대상을 조회하는데 실패했습니다.',
               });
@@ -516,8 +516,7 @@ exports.getParagraphFile = (req, res) => {
           });
         }
       })
-      .catch((err) => {
-        console.log(err);
+      .catch(() => {
         res.status(400).json({
           message: '대상을 조회하는데 실패했습니다.',
         });
@@ -591,7 +590,6 @@ exports.putParagraphFile = (req, res) => {
 };
 
 exports.submitVersion = (req, res) => {
-
   const { recruit_id, version_no } = req.params;
   if (req.session.user === undefined || req.session.user === null) {
     res.status(401).json({
@@ -693,6 +691,134 @@ exports.submitVersion = (req, res) => {
       .catch(() => {
         res.status(400).json({
           message: '제출에 실패했습니다.',
+        });
+      });
+  }
+};
+
+exports.getAllFeedback = (req, res) => {
+  const { recruit_id, version_no } = req.params;
+
+  if (req.session.user === undefined || req.session.user === null) {
+    res.status(401).json({
+      message: '로그인한 사용자만 조회할 수 있습니다.',
+    });
+  } else {
+    const { userId } = req.session.user;
+    recruitModel
+      .findOne({
+        where: {
+          recruitId: recruit_id,
+        },
+      })
+      .then((recruit) => {
+        if (recruit.actorId !== userId || recruit.clientId !== userId) {
+          res.status(403).json({
+            message: '채택된 성우나 요청자만 조회 가능합니다.',
+          });
+        } else {
+          const order = [['created_at', 'ASC']];
+          const attributes = ['paragraph_number', 'feedback_point', 'feedback_content', 'created_at'];
+          feedbackModel
+            .findAll({
+              attributes,
+              where: {
+                recruitId: recruit_id,
+                version: version_no,
+              },
+              order,
+            })
+            .then((feedback) => {
+              res.json(feedback);
+            })
+            .catch(() => {
+              res.status(400).json({
+                message: '피드백 조회에 실패했습니다.',
+              });
+            });
+        }
+      })
+      .catch(() => {
+        res.status(400).json({
+          message: '피드백 조회에 실패했습니다.',
+        });
+      });
+  }
+};
+
+exports.writeFeedback = (req, res) => {
+  const { recruit_id, version_no, paragraph_no } = req.params;
+  const { feedback_content, feedback_point } = req.body;
+
+  if (req.session.user === undefined || req.session.user === null) {
+    res.status(401).json({
+      message: '로그인한 사용자만 조회할 수 있습니다.',
+    });
+  } else if (isBlank(feedback_content) || feedback_content.length > 1000) {
+    res.status(412).json({
+      message: '피드백 내용이 부적합합니다.',
+    });
+  } else {
+    const { userId } = req.session.user;
+    recruitModel
+      .findOne({
+        where: {
+          recruitId: recruit_id,
+        },
+      })
+      .then((recruit) => {
+        if (recruit.clientId !== userId) {
+          res.status(403).json({
+            message: '요청자만 피드백을 작성할 수 있습니다.',
+          });
+        } else if (recruit.state !== 'WAIT_FEEDBACK' || recruit.currentVersion !== Number(version_no)) {
+          res.status(400).json({
+            message: '피드백을 작성할 수 있는 상태가 아닙니다.',
+          });
+        } else {
+          recordingModel
+            .findOne({
+              where: {
+                recruitId: recruit_id,
+                version: version_no,
+                paragraphNumber: paragraph_no,
+              },
+            })
+            .then((recording) => {
+              if (recording.fileLength < feedback_point || feedback_point < 0) {
+                res.status(412).json({
+                  message: '피드백의 위치가 부적합합니다.',
+                });
+              } else {
+                feedbackModel
+                  .create({
+                    recruitId: recruit_id,
+                    version: version_no,
+                    paragraphNumber: paragraph_no,
+                    feedbackContent: feedback_content,
+                    feedbackPoint: feedback_point,
+                    createdAt: Date.now(),
+                  })
+                  .then((created) => {
+                    res.status(201).json(created);
+                  })
+                  .catch(() => {
+                    res.status(400).json({
+                      message: '피드백 작성에 실패했습니다.',
+                    });
+                  });
+              }
+            })
+            .catch(() => {
+              res.status(400).json({
+                message: '피드백 작성에 실패했습니다.',
+              });
+            });
+        }
+      })
+      .catch(() => {
+        res.status(400).json({
+          message: '피드백 작성에 실패했습니다.',
         });
       });
   }
