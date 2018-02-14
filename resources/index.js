@@ -1,12 +1,14 @@
+const session = require('express-session');
+const fs = require('fs');
+const path = require('path');
 const process = require('process');
+const multer = require('multer');
+const uuid = require('uuid/v4');
+const winston = require('winston');
+const RedisStore = require('connect-redis')(session);
 
 const dev = require('../resources/dev');
 const real = require('../resources/real');
-
-const session = require('express-session');
-const RedisStore = require('connect-redis')(session);
-
-const winston = require('winston');
 
 const resources = Object.assign({}, process.env.ENV_VARIABLE === 'dev' ? dev : real);
 
@@ -31,6 +33,46 @@ resources.session = {
   },
 };
 
-resources.logger = winston.cli()
+const createStorage = (storagePath) => {
+  const extensionPattern = /(?:\.([^.]+))?$/;
+
+  return multer({
+    storage: multer.diskStorage({
+      destination: (req, file, callback) => {
+        callback(null, storagePath);
+      },
+      filename: (req, file, callback) => {
+        const filename = uuid();
+        const extension = extensionPattern.exec(file.originalname)[1];
+        callback(null, `${filename}.${extension}`);
+      },
+    }),
+  });
+};
+
+resources.storages = {};
+
+const parents = '../data';
+const parentDirectory = path.join(__dirname, parents);
+
+if (!fs.existsSync(parentDirectory)) {
+  fs.mkdirSync(parentDirectory);
+}
+
+const paths = {
+  profiles: '/profiles',
+  samples: '/samples',
+  recordings: '/recordings',
+};
+
+Object.keys(paths).forEach((key) => {
+  const target = path.join(parentDirectory, paths[key]);
+  if (!fs.existsSync(target)) {
+    fs.mkdirSync(target);
+  }
+  resources.storages[key] = createStorage(target);
+});
+
+resources.logger = winston.cli();
 
 module.exports = resources;
