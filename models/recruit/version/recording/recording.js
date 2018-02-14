@@ -43,6 +43,6 @@ const options = {
   timestamps: false,
 };
 
-const versionModel = database.define('recordings', columns, options);
+const recordingModels = database.define('recordings', columns, options);
 
-module.exports = versionModel;
+module.exports = recordingModels;

@@ -525,6 +525,7 @@ exports.getParagraphFile = (req, res) => {
   }
 };
 
+// 작업 중일 경우에만 가능하도록 수행
 exports.putParagraphFile = (req, res) => {
   const { recruit_id, version_no, paragraph_no } = req.params;
   const { path } = req.file;
@@ -545,6 +546,10 @@ exports.putParagraphFile = (req, res) => {
           res.status(404).json({
             message: '구인 내용을 찾을 수 없습니다.',
           });
+        } else if (recruit.state !== 'WAIT_PROCESS') {
+          res.status(400).json({
+            message: '파일을 올릴 수 없는 상태입니다.',
+          });
         } else if (recruit.actorId === userId) {
           duration(path, (err, length) => {
             if (length < 3) {
@@ -553,7 +558,7 @@ exports.putParagraphFile = (req, res) => {
               });
             } else {
               recordingModel
-                .create({
+                .upsert({
                   recruitId: recruit_id,
                   version: version_no,
                   paragraphNumber: paragraph_no,
