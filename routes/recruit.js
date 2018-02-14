@@ -27,9 +27,14 @@ router.get('/:id', recruit.getRecruitDetail);
 router.get('/:id/scripts', recruit.getRecruitBody);
 router.get('/:id/samples', recruit.getRecruitSample);
 router.get('/:id/bids', bidding.getRecruitBiddings);
+router.get('/:id/versions', recruit.getAllVersions);
+router.get('/:id/versions/current', recruit.getCurrentVersion);
+router.get('/:recruit_id/versions/:version_no/paragraphs/:paragraph_no/file', recruit.getParagraphFile);
 
 router.post('/', recruit.createRecruit);
 router.post('/:id/cancel', recruit.cancelRecruit);
 router.post('/:id/bids', upload.single('sample'), bidding.createBidding);
+
+router.put('/:recruit_id/versions/:version_no/paragraphs/:paragraph_no/file', upload.single('recording'), recruit.putParagraphFile);
 
 module.exports = router;

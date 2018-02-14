@@ -3,7 +3,7 @@ const database = require('../database');
 const recruit = require('../recruit/recruit');
 
 const columns = {
-  recruit_id: {
+  recruitId: {
     type: sequelize.INTEGER,
     field: 'recruit_id',
     primaryKey: true,
@@ -12,7 +12,7 @@ const columns = {
       key: 'recruit_id',
     },
   },
-  paragraph_number: {
+  paragraphNumber: {
     type: sequelize.INTEGER,
     field: 'paragraph_number',
     primaryKey: true,

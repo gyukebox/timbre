@@ -3,7 +3,7 @@ const database = require('../../database');
 const recruit = require('../../recruit/recruit');
 
 const columns = {
-  recruit_id: {
+  recruitId: {
     type: sequelize.INTEGER,
     field: 'recruit_id',
     primaryKey: true,
@@ -18,10 +18,16 @@ const columns = {
     primaryKey: true,
     allowNull: false,
   },
-  feedback_content: {
+  feedbackContent: {
     type: sequelize.STRING(2000),
     field: 'feedback_content',
     allowNull: true,
+  },
+  createdAt: {
+    type: sequelize.DATE,
+    field: 'created_at',
+    allowNull: false,
+    defaultValue: Date.now(),
   },
 };
 
