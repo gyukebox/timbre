@@ -525,7 +525,6 @@ exports.getParagraphFile = (req, res) => {
   }
 };
 
-// 작업 중일 경우에만 가능하도록 수행
 exports.putParagraphFile = (req, res) => {
   const { recruit_id, version_no, paragraph_no } = req.params;
   const { path } = req.file;
@@ -586,6 +585,114 @@ exports.putParagraphFile = (req, res) => {
       .catch(() => {
         res.status(400).json({
           message: '녹음 파일을 올리는데 실패했습니다.',
+        });
+      });
+  }
+};
+
+exports.submitVersion = (req, res) => {
+
+  const { recruit_id, version_no } = req.params;
+  if (req.session.user === undefined || req.session.user === null) {
+    res.status(401).json({
+      message: '로그인한 사용자만 조회할 수 있습니다.',
+    });
+  } else {
+    const { userId } = req.session.user;
+    recruitModel
+      .findOne({
+        where: {
+          recruitId: recruit_id,
+        },
+      })
+      .then((recruit) => {
+        if (!recruit) {
+          res.status(404).json({
+            message: '구인 내용을 찾을 수 없습니다.',
+          });
+        } else if (recruit.actorId !== userId) {
+          res.status(403).json({
+            message: '채택된 성우만 작업 가능합니다.',
+          });
+        } else if (recruit.currentVersion !== Number(version_no) || recruit.state !== 'WAIT_PROCESS') {
+          res.status(400).json({
+            message: '제출 가능한 상태가 아닙니다.',
+          });
+        } else {
+          paragraphModel
+            .count({
+              where: {
+                recruitId: recruit_id,
+              },
+            })
+            .then((count) => {
+              recordingModel
+                .findAll({
+                  where: {
+                    recruitId: recruit_id,
+                    version: version_no,
+                  },
+                })
+                .then((recordings) => {
+                  if (recordings.length !== count) {
+                    res.status(400).json({
+                      message: '누락된 녹음 파일이 있습니다.',
+                    });
+                  } else {
+                    for (let i = 0; i < recordings.length; i++) {
+                      const recording = recordings[i];
+                      if (isBlank(recording.fileUrl)) {
+                        res.status(400).json({
+                          message: '누락된 녹음 파일이 있습니다.',
+                        });
+                        return;
+                      }
+                    }
+
+                    database
+                      .transaction()
+                      .then((transaction) => {
+                        recruit
+                          .update({
+                            state: 'WAIT_FEEDBACK',
+                          }, { transaction })
+                          .then(() => {
+                            // TODO : 알림 추가 작업
+                            transaction.commit();
+                            res.status(200).json({
+                              message: '제출에 성공했습니다.',
+                            });
+                          })
+                          .catch(() => {
+                            transaction.rollback();
+                            res.status(400).json({
+                              message: '제출에 실패했습니다.',
+                            });
+                          });
+                      })
+                      .catch(() => {
+                        res.status(400).json({
+                          message: '제출에 실패했습니다.',
+                        });
+                      });
+                  }
+                })
+                .catch(() => {
+                  res.status(400).json({
+                    message: '제출에 실패했습니다.',
+                  });
+                });
+            })
+            .catch(() => {
+              res.status(400).json({
+                message: '제출에 실패했습니다.',
+              });
+            });
+        }
+      })
+      .catch(() => {
+        res.status(400).json({
+          message: '제출에 실패했습니다.',
         });
       });
   }
