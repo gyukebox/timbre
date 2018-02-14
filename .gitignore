@@ -69,3 +69,4 @@ typings/
 !.elasticbeanstalk/config.yml
 !.elasticbeanstalk/*.global.yml
 /public/
+/data/

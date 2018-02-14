@@ -90,7 +90,7 @@ exports.acceptBidding = (req, res) => {
                   .update({
                     actorId: bid.actorId,
                     actorName: bid.userName,
-                    state: 'WAIT_FEEDBACK',
+                    state: 'WAIT_PROCESS',
                     currentVersion: 1,
                   }, { transaction })
                   .then(() => {
