@@ -329,6 +329,7 @@ exports.cancelRecruit = (req, res) => {
                   active: false,
                 }, { transaction })
                 .then(() => {
+                  // TODO : 알림 추가
                   transaction.commit();
                   res.status(204).send();
                 })
@@ -819,6 +820,137 @@ exports.writeFeedback = (req, res) => {
       .catch(() => {
         res.status(400).json({
           message: '피드백 작성에 실패했습니다.',
+        });
+      });
+  }
+};
+
+exports.acceptVersion = (req, res) => {
+  const { recruit_id, version_no } = req.params;
+
+  if (req.session.user === undefined || req.session.user === null) {
+    res.status(401).json({
+      message: '로그인한 사용자만 조회할 수 있습니다.',
+    });
+  } else {
+    const { userId } = req.session.user;
+    recruitModel
+      .findOne({
+        where: {
+          recruitId: recruit_id,
+        },
+      })
+      .then((recruit) => {
+        if (recruit.clientId !== userId) {
+          res.status(403).json({
+            message: '요청자만 작업본을 수락할 수 있습니다.',
+          });
+        } else if (recruit.state !== 'WAIT_FEEDBACK' || recruit.currentVersion !== Number(version_no)) {
+          res.status(400).json({
+            message: '작업본을 수락할 수 있는 상태가 아닙니다.',
+          });
+        } else {
+          recruit
+            .update({
+              state: 'ON_WITHDRAW',
+            })
+            .then(() => {
+              // TODO : 알림 추가
+              res.status(200).json({
+                message: '작업본 수락에 성공했습니다.',
+              });
+            })
+            .catch(() => {
+              res.status(400).json({
+                message: '작업본 수락에 실패했습니다.',
+              });
+            });
+        }
+      })
+      .catch(() => {
+        res.status(400).json({
+          message: '작업본 수락에 실패했습니다.',
+        });
+      });
+  }
+};
+
+// /recruits/:recruit_id/versions/:version_no/reject
+exports.rejectVersion = (req, res) => {
+  const { recruit_id, version_no } = req.params;
+
+  if (req.session.user === undefined || req.session.user === null) {
+    res.status(401).json({
+      message: '로그인한 사용자만 조회할 수 있습니다.',
+    });
+  } else {
+    const { userId } = req.session.user;
+
+    database
+      .transaction()
+      .then((transaction) => {
+        recruitModel
+          .findOne({
+            where: {
+              recruitId: recruit_id,
+            },
+          })
+          .then((recruit) => {
+            if (recruit.clientId !== userId) {
+              transaction.rollback();
+              res.status(401).json({
+                message: '요청자만 작업본을 반려할 수 있습니다.',
+              });
+            } else if (recruit.state !== 'WAIT_FEEDBACK') {
+              transaction.rollback();
+              res.status(400).json({
+                message: '작업본을 반려할 수 있는 상태가 아닙니다.',
+              });
+            } else {
+              recruit
+                .update({
+                  currentVersion: Number(version_no) + 1,
+                }, { transaction })
+                .then(() => {
+                  const attributes = {
+                    recruitId: recruit.recruitId,
+                    version: Number(version_no) + 1,
+                    createdAt: Date.now(),
+                  };
+                  versionModel
+                    .create(attributes, { transaction })
+                    .then(() => {
+                      // TODO : 알림 추가
+                      transaction.commit();
+                      res.status(200).json({
+                        message: '작업본 반려에 성공했습니다.',
+                      });
+                    })
+                    .catch(() => {
+                      transaction.rollback();
+                      res.status(400).json({
+                        message: '작업본 반려에 실패했습니다.',
+                      });
+                    });
+                })
+                .catch(() => {
+                  transaction.rollback();
+                  res.status(400).json({
+                    message: '작업본 반려에 실패했습니다.',
+                  });
+                });
+            }
+          })
+          .catch(() => {
+            transaction.rollback();
+            res.status(400).json({
+              message: '작업본 반려에 실패했습니다.',
+            });
+          });
+      })
+      .catch(() => {
+        res.status(400).json({
+          message: '작업본 반려에 실패했습니다.',
         });
       });
   }
