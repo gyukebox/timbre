@@ -1,21 +1,21 @@
-const Sequelize = require('sequelize');
+const sequelize = require('sequelize');
 const types = require('../type/types');
 const database = require('../database');
 
 const columns = {
   userId: {
-    type: Sequelize.INTEGER,
+    type: sequelize.INTEGER,
     field: 'user_id',
     primaryKey: true,
     autoIncrement: true,
   },
   name: {
-    type: Sequelize.STRING(100),
+    type: sequelize.STRING(100),
     unique: true,
     allowNull: false,
   },
   mail: {
-    type: Sequelize.STRING(300),
+    type: sequelize.STRING(300),
     unique: true,
     allowNull: false,
     validate: {
@@ -32,28 +32,28 @@ const columns = {
     allowNull: false,
   },
   active: {
-    type: Sequelize.BOOLEAN,
+    type: sequelize.BOOLEAN,
     allowNull: false,
     defaultValue: true,
   },
   introduction: {
-    type: Sequelize.STRING(2000),
+    type: sequelize.STRING(2000),
     allowNull: true,
   },
   profile: {
-    type: Sequelize.STRING(300),
+    type: sequelize.STRING(300),
     allowNull: true,
   },
   token: {
-    type: Sequelize.STRING(300),
+    type: sequelize.STRING(300),
     allowNull: true,
   },
   expiry: {
-    type: Sequelize.DATE,
+    type: sequelize.DATE,
     allowNull: true,
   },
   authenticated: {
-    type: Sequelize.DATE,
+    type: sequelize.DATE,
     allowNull: true,
   },
 };

@@ -75,4 +75,7 @@ Object.keys(paths).forEach((key) => {
 
 resources.logger = winston.cli();
 
+resources.taxRate = 0.1;
+resources.refundRate = 0.5;
+
 module.exports = resources;

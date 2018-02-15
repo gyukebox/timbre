@@ -6,7 +6,12 @@ const paragraphModel = require('../models/recruit/paragraph');
 const versionModel = require('../models/recruit/version/version');
 const recordingModel = require('../models/recruit/version/recording/recording');
 const feedbackModel = require('../models/recruit/version/recording/feedback');
+const depositModel = require('../models/pay/deposit/deposit');
+const historyModel = require('../models/pay/deposit/history');
+const withdrawModel = require('../models/pay/withdraw/withdraw');
+const taxModel = require('../models/pay/tax/tax');
 const { isBlank, isValidPageParameters, isScriptsReadableForActor } = require('../validation/validation');
+const { taxRate, refundRate } = require('../resources');
 
 exports.getRecruitList = (req, res) => {
   const { from, size } = req.params;
@@ -239,9 +244,11 @@ exports.createRecruit = (req, res) => {
       return;
     }
 
+    const { userId, name } = req.session.user;
+
     const recruitAttributes = {
-      clientId: req.session.user.userId,
-      clientName: req.session.user.name,
+      clientId: userId,
+      clientName: name,
       title,
       description,
       category,
@@ -258,11 +265,17 @@ exports.createRecruit = (req, res) => {
         recruitModel
           .create(recruitAttributes, { transaction })
           .then((created) => {
+            const depositAttributes = { recruitId: created.recruitId, clientId: userId, amount: 0 };
+
             for (let i = 0; i < paragraphAttributes.length; i++) {
               paragraphAttributes[i].recruitId = created.recruitId;
             }
-            paragraphModel
-              .bulkCreate(paragraphAttributes, { transaction })
+
+            Promise
+              .all([
+                paragraphModel.bulkCreate(paragraphAttributes, { transaction }),
+                depositModel.create(depositAttributes, { transaction }),
+              ])
               .then(() => {
                 transaction.commit();
 
@@ -312,26 +325,59 @@ exports.cancelRecruit = (req, res) => {
           })
           .then((retrieved) => {
             const cannotCancelState = ['WAIT_FEEDBACK', 'ON_WITHDRAW', 'DONE', 'CANCELLED'];
-            if (retrieved.actor_id !== req.session.user.userId) {
+            const {
+              recruitId, actorId, state, amount,
+            } = retrieved;
+            if (actorId !== req.session.user.userId) {
               transaction.rollback();
               res.status(403).json({
                 message: '구인에 참여한 성우만 취소할 수 있습니다.',
               });
-            } else if (cannotCancelState.indexOf(retrieved.state) !== -1) {
+            } else if (cannotCancelState.indexOf(state) !== -1) {
               transaction.rollback();
               res.status(400).json({
                 message: '요청을 취소할 수 없는 상태입니다.',
               });
             } else {
-              retrieved
-                .update({
-                  state: 'CANCELLED',
-                  active: false,
-                }, { transaction })
-                .then(() => {
-                  // TODO : 알림 추가
-                  transaction.commit();
-                  res.status(204).send();
+              depositModel
+                .findOne({
+                  where: {
+                    recruitId,
+                  },
+                })
+                .then((deposit) => {
+                  const tax = amount * taxRate;
+                  const remain = amount - tax;
+                  const refundAmount = remain * refundRate;
+                  const withdrawAmount = remain - refundAmount;
+
+                  const recruitAttributes = { state: 'CANCELLED', active: false };
+                  const taxAttributes = { depositId: deposit.depositId, amount: tax };
+                  const withdrawAttributes = {
+                    depositId: deposit.depositId,
+                    actorId,
+                    amount: withdrawAmount,
+                  };
+
+                  // 환불 및 상태 변경
+                  Promise
+                    .all([
+                      retrieved.update(recruitAttributes, { transaction }),
+                      withdrawModel.create(withdrawAttributes, { transaction }),
+                      taxModel.create(taxAttributes, { transaction }),
+                      // TODO : 알림 추가
+                    ])
+                    .then(() => {
+                      // 실제 출금 로직은 연동 포인트가 없으므로 개발 단계에서는 생략
+                      transaction.commit();
+                      res.status(204).send();
+                    })
+                    .catch(() => {
+                      transaction.rollback();
+                      res.status(400).json({
+                        message: '구인 취소에 실패했습니다.',
+                      });
+                    });
                 })
                 .catch(() => {
                   transaction.rollback();
@@ -651,12 +697,14 @@ exports.submitVersion = (req, res) => {
                     database
                       .transaction()
                       .then((transaction) => {
-                        recruit
-                          .update({
-                            state: 'WAIT_FEEDBACK',
-                          }, { transaction })
-                          .then(() => {
+                        const recruitAttributes = { state: 'WAIT_FEEDBACK' };
+
+                        Promise
+                          .all([
+                            recruit.update(recruitAttributes, { transaction }),
                             // TODO : 알림 추가 작업
+                          ])
+                          .then(() => {
                             transaction.commit();
                             res.status(200).json({
                               message: '제출에 성공했습니다.',
@@ -841,7 +889,10 @@ exports.acceptVersion = (req, res) => {
         },
       })
       .then((recruit) => {
-        if (recruit.clientId !== userId) {
+        const {
+          recruitId, amount, clientId, actorId,
+        } = recruit;
+        if (clientId !== userId) {
           res.status(403).json({
             message: '요청자만 작업본을 수락할 수 있습니다.',
           });
@@ -850,15 +901,53 @@ exports.acceptVersion = (req, res) => {
             message: '작업본을 수락할 수 있는 상태가 아닙니다.',
           });
         } else {
-          recruit
-            .update({
-              state: 'ON_WITHDRAW',
-            })
-            .then(() => {
-              // TODO : 알림 추가
-              res.status(200).json({
-                message: '작업본 수락에 성공했습니다.',
-              });
+          database
+            .transaction()
+            .then((transaction) => {
+              depositModel
+                .findOne({
+                  where: {
+                    recruitId,
+                  },
+                })
+                .then((deposit) => {
+                  const tax = amount * taxRate;
+                  const withdrawAmount = amount - tax;
+
+                  const recruitAttributes = { state: 'DONE' };
+                  const taxAttributes = { depositId: deposit.depositId, amount: tax };
+                  const withdrawAttributes = {
+                    depositId: deposit.depositId,
+                    actorId,
+                    amount: withdrawAmount,
+                  };
+
+                  Promise
+                    .all([
+                      recruit.update(recruitAttributes, { transaction }),
+                      taxModel.create(taxAttributes, { transaction }),
+                      withdrawModel.create(withdrawAttributes, { transaction }),
+                      // TODO : 알림 추가
+                    ])
+                    .then(() => {
+                      transaction.commit();
+                      res.status(200).json({
+                        message: '작업본 수락에 성공했습니다.',
+                      });
+                    })
+                    .catch(() => {
+                      transaction.rollback();
+                      res.status(400).json({
+                        message: '작업본 수락에 실패했습니다.',
+                      });
+                    });
+                })
+                .catch(() => {
+                  transaction.rollback();
+                  res.status(400).json({
+                    message: '작업본 수락에 실패했습니다.',
+                  });
+                });
             })
             .catch(() => {
               res.status(400).json({
@@ -875,7 +964,6 @@ exports.acceptVersion = (req, res) => {
   }
 };
 
-// /recruits/:recruit_id/versions/:version_no/reject
 exports.rejectVersion = (req, res) => {
   const { recruit_id, version_no } = req.params;
 
@@ -907,31 +995,24 @@ exports.rejectVersion = (req, res) => {
                 message: '작업본을 반려할 수 있는 상태가 아닙니다.',
               });
             } else {
-              recruit
-                .update({
-                  currentVersion: Number(version_no) + 1,
-                }, { transaction })
+              const recruitAttributes = { currentVersion: Number(version_no) + 1, state: 'WAIT_PROCESS' };
+              const versionAttributes = {
+                recruitId: recruit.recruitId,
+                version: Number(version_no) + 1,
+                createdAt: Date.now(),
+              };
+
+              Promise
+                .all([
+                  recruit.update(recruitAttributes, { transaction }),
+                  versionModel.create(versionAttributes, { transaction }),
+                  // TODO : 알림 추가
+                ])
                 .then(() => {
-                  const attributes = {
-                    recruitId: recruit.recruitId,
-                    version: Number(version_no) + 1,
-                    createdAt: Date.now(),
-                  };
-                  versionModel
-                    .create(attributes, { transaction })
-                    .then(() => {
-                      // TODO : 알림 추가
-                      transaction.commit();
-                      res.status(200).json({
-                        message: '작업본 반려에 성공했습니다.',
-                      });
-                    })
-                    .catch(() => {
-                      transaction.rollback();
-                      res.status(400).json({
-                        message: '작업본 반려에 실패했습니다.',
-                      });
-                    });
+                  transaction.commit();
+                  res.status(200).json({
+                    message: '작업본 반려에 성공했습니다.',
+                  });
                 })
                 .catch(() => {
                   transaction.rollback();
@@ -951,6 +1032,141 @@ exports.rejectVersion = (req, res) => {
       .catch(() => {
         res.status(400).json({
           message: '작업본 반려에 실패했습니다.',
+        });
+      });
+  }
+};
+
+exports.deposit = (req, res) => {
+  const { id } = req.params;
+  const { amount, bank_type, bank_account } = req.body;
+
+  if (req.session.user === undefined || req.session.user === null) {
+    res.status(401).json({
+      message: '로그인한 사용자만 조회할 수 있습니다.',
+    });
+  } else {
+    const { userId } = req.session.user;
+
+    recruitModel
+      .findOne({
+        where: {
+          recruitId: id,
+        },
+      })
+      .then((recruit) => {
+        if (!recruit) {
+          res.status(404).json({
+            message: '구인 정보를 찾지 못했습니다.',
+          });
+        } else if (recruit.clientId !== userId) {
+          res.status(403).json({
+            message: '요청자만 입금을 수행할 수 있습니다.',
+          });
+        } else if (recruit.state !== 'WAIT_DEPOSIT') {
+          res.status(400).json({
+            message: '입금 가능한 상태가 아닙니다.',
+          });
+        } else {
+          depositModel
+            .findOne({
+              where: {
+                recruitId: id,
+              },
+            })
+            .then((deposit) => {
+              historyModel
+                .sum('amount', {
+                  where: {
+                    depositId: deposit.depositId,
+                  },
+                })
+                .then((sum) => {
+                  let total = sum;
+                  if (Number.isNaN(sum)) {
+                    total = 0;
+                  }
+
+                  if (total + Number(amount) <= recruit.amount) {
+                    database
+                      .transaction()
+                      .then((transaction) => {
+                        const depositAttributes = {
+                          recruitId: id,
+                          clientId: userId,
+                          amount: total + Number(amount),
+                        };
+
+                        deposit
+                          .update(depositAttributes, { transaction })
+                          .then((created) => {
+                            const recruitAttributes = { state: 'ON_BIDDINGS' };
+                            const historyAttributes = {
+                              depositId: created.depositId,
+                              clientId: userId,
+                              amount,
+                              bankType: bank_type,
+                              bankAccount: bank_account,
+                            };
+
+                            const target = [
+                              historyModel.create(historyAttributes, { transaction }),
+                            ];
+
+                            // 구인 금액만큼 입금한 경우 상태를 자동으로 변경한다
+                            if (total + Number(amount) === recruit.amount) {
+                              target.push(recruit.update(recruitAttributes, { transaction }));
+                            }
+
+                            Promise
+                              .all(target)
+                              .then(() => {
+                                transaction.commit();
+                                res.status(200).json({
+                                  message: '입금에 성공했습니다.',
+                                });
+                              })
+                              .catch(() => {
+                                transaction.rollback();
+                                res.status(400).json({
+                                  message: '입금에 실패했습니다.',
+                                });
+                              });
+                          })
+                          .catch(() => {
+                            transaction.rollback();
+                            res.status(400).json({
+                              message: '입금에 실패했습니다.',
+                            });
+                          });
+                      })
+                      .catch(() => {
+                        res.status(400).json({
+                          message: '입금에 실패했습니다.',
+                        });
+                      });
+                  } else {
+                    res.status(412).json({
+                      message: '구인에 내건 금액보다 많습니다.',
+                    });
+                  }
+                })
+                .catch(() => {
+                  res.status(400).json({
+                    message: '입금에 실패했습니다.',
+                  });
+                });
+            })
+            .catch(() => {
+              res.status(400).json({
+                message: '입금에 실패했습니다.',
+              });
+            });
+        }
+      })
+      .catch(() => {
+        res.status(400).json({
+          message: '입금에 실패했습니다.',
         });
       });
   }

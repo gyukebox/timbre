@@ -1,11 +1,12 @@
-const Sequelize = require('sequelize');
+const sequelize = require('sequelize');
 
 const user = require('./user');
+const types = require('../type/types');
 const database = require('../database');
 
 const columns = {
   userId: {
-    type: Sequelize.INTEGER,
+    type: sequelize.INTEGER,
     field: 'user_id',
     references: {
       model: user,
@@ -14,16 +15,16 @@ const columns = {
     primaryKey: true,
   },
   password: {
-    type: Sequelize.STRING(300),
+    type: sequelize.STRING(300),
     allowNull: false,
   },
   bankType: {
-    type: Sequelize.STRING(100),
+    type: types.bankType,
     field: 'bank_type',
     allowNull: true,
   },
   bankAccount: {
-    type: Sequelize.STRING(200),
+    type: sequelize.STRING(200),
     field: 'bank_account',
     allowNull: true,
   },
