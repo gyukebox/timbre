@@ -20,6 +20,8 @@ router.post('/', recruit.createRecruit);
 router.post('/:id/cancel', recruit.cancelRecruit);
 router.post('/:id/bids', samples.single('sample'), bidding.createBidding);
 router.post('/:recruit_id/versions/:version_no/submit', recruit.submitVersion);
+router.post('/:recruit_id/versions/:version_no/accept', recruit.acceptVersion);
+router.post('/:recruit_id/versions/:version_no/reject', recruit.rejectVersion);
 router.post('/:recruit_id/versions/:version_no/paragraphs/:paragraph_no/feedback', recruit.writeFeedback);
 
 router.put('/:recruit_id/versions/:version_no/paragraphs/:paragraph_no/file', recordings.single('recording'), recruit.putParagraphFile);

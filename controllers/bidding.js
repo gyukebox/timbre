@@ -213,6 +213,7 @@ exports.createBidding = (req, res) => {
                     bidModel
                       .create(attributes, { transaction })
                       .then(() => {
+                        // TODO : 알림 추가
                         transaction.commit();
                         res.status(201).json({
                           message: '입찰 정보를 성공적으로 등록했습니다.',
