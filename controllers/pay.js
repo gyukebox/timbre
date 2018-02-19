@@ -1,5 +1,6 @@
 /* eslint-disable camelcase */
 const accountModel = require('../models/user/account');
+const withdrawModel = require('../models/pay/withdraw/withdraw');
 const { bankTypes } = require('../enum/enum');
 const { isBlank } = require('../validation/validation');
 
@@ -59,5 +60,41 @@ exports.putBankAccount = (req, res) => {
           message: '계정 정보 변경에 실패했습니다.',
         });
       });
+  }
+};
+
+exports.getProfits = (req, res) => {
+  if (req.session.user === undefined || req.session.user === null) {
+    res.status(401).json({
+      message: '로그인한 사용자만 조회할 수 있습니다.',
+    });
+  } else {
+    const { userId, type } = req.session.user;
+
+    if (type !== 'ACTOR') {
+      res.status(403).json({
+        message: '성우만 조회 가능합니다.',
+      });
+    } else {
+      withdrawModel
+        .sum('amount', {
+          where: {
+            actorId: userId,
+          },
+        })
+        .then((amount) => {
+          if (amount === undefined || amount === null || Number.isNaN(amount)) {
+            amount = 0;
+          }
+          res.json({
+            amount,
+          });
+        })
+        .catch(() => {
+          res.status(400).json({
+            message: '수익금 조회에 실패했습니다.',
+          });
+        });
+    }
   }
 };
