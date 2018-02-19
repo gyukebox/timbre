@@ -1,7 +1,6 @@
 const sequelize = require('sequelize');
 const database = require('../../database');
 const deposit = require('../deposit/deposit');
-const user = require('../../user/user');
 
 const columns = {
   depositId: {
@@ -13,14 +12,6 @@ const columns = {
       key: 'deposit_id',
     },
   },
-  actorId: {
-    type: sequelize.INTEGER,
-    field: 'actor_id',
-    references: {
-      model: user,
-      key: 'user_id',
-    },
-  },
   amount: {
     type: sequelize.INTEGER,
     field: 'amount',
@@ -29,11 +20,11 @@ const columns = {
 };
 
 const options = {
-  tableName: 'pay_withdraw',
+  tableName: 'pay_tax',
   freezeTableName: true,
   underscored: true,
 };
 
-const withdrawModel = database.define('withdraws', columns, options);
+const taxModel = database.define('tax', columns, options);
 
-module.exports = withdrawModel;
+module.exports = taxModel;

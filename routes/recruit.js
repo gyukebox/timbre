@@ -19,6 +19,7 @@ router.get('/:recruit_id/versions/:version_no/feedback', recruit.getAllFeedback)
 router.post('/', recruit.createRecruit);
 router.post('/:id/cancel', recruit.cancelRecruit);
 router.post('/:id/bids', samples.single('sample'), bidding.createBidding);
+router.post('/:id/deposit', recruit.deposit);
 router.post('/:recruit_id/versions/:version_no/submit', recruit.submitVersion);
 router.post('/:recruit_id/versions/:version_no/accept', recruit.acceptVersion);
 router.post('/:recruit_id/versions/:version_no/reject', recruit.rejectVersion);

@@ -143,7 +143,7 @@ exports.login = (req, res) => {
       accountModel
         .findOne({
           where: {
-            user_id: user.userId,
+            userId: user.userId,
           },
         })
         .then((account) => {

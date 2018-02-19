@@ -80,39 +80,35 @@ exports.acceptBidding = (req, res) => {
                 res.status(400).json({
                   message: '입찰에 실패했습니다.',
                 });
-              } else if (recruit.client_id !== req.session.user.userId) {
+              } else if (recruit.clientId !== req.session.user.userId) {
                 transaction.rollback();
                 res.status(403).json({
                   message: '입찰 수락은 요청자만 할 수 있습니다.',
                 });
               } else {
-                recruit
-                  .update({
-                    actorId: bid.actorId,
-                    actorName: bid.userName,
-                    state: 'WAIT_PROCESS',
-                    currentVersion: 1,
-                  }, { transaction })
+                const recruitAttributes = {
+                  actorId: bid.actorId,
+                  actorName: bid.userName,
+                  state: 'WAIT_PROCESS',
+                  currentVersion: 1,
+                };
+
+                const versionAttributes = {
+                  recruitId: recruit.recruitId,
+                  version: 1,
+                  createdAt: Date.now(),
+                };
+
+                Promise
+                  .all([
+                    recruit.update(recruitAttributes, { transaction }),
+                    versionModel.create(versionAttributes, { transaction }),
+                  ])
                   .then(() => {
-                    const attributes = {
-                      recruitId: recruit.recruitId,
-                      version: 1,
-                      createdAt: Date.now(),
-                    };
-                    versionModel
-                      .create(attributes, { transaction })
-                      .then(() => {
-                        transaction.commit();
-                        res.status(200).json({
-                          message: '입찰에 성공했습니다.',
-                        });
-                      })
-                      .catch(() => {
-                        transaction.rollback();
-                        res.status(400).json({
-                          message: '입찰에 실패했습니다.',
-                        });
-                      });
+                    transaction.commit();
+                    res.status(200).json({
+                      message: '입찰에 성공했습니다.',
+                    });
                   })
                   .catch(() => {
                     transaction.rollback();
@@ -200,7 +196,7 @@ exports.createBidding = (req, res) => {
                       message: '입찰 정보 등록에 실패했습니다.',
                     });
                   } else {
-                    const attributes = {
+                    const bidAttributes = {
                       actorId: userId,
                       recruitId: recruit.recruitId,
                       username: name,
@@ -210,10 +206,12 @@ exports.createBidding = (req, res) => {
                       sampleFileLength: length,
                     };
 
-                    bidModel
-                      .create(attributes, { transaction })
-                      .then(() => {
+                    Promise
+                      .all([
+                        bidModel.create(bidAttributes, { transaction }),
                         // TODO : 알림 추가
+                      ])
+                      .then(() => {
                         transaction.commit();
                         res.status(201).json({
                           message: '입찰 정보를 성공적으로 등록했습니다.',
