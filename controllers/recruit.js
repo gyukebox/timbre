@@ -218,6 +218,9 @@ exports.createRecruit = (req, res) => {
       title, description, category, mood, amount, sample, script,
     } = req.body;
 
+    console.log(recruitDueDate);
+    console.log(processDueDate);
+
     const paragraphs = script.split('\n\n');
     const paragraphAttributes = paragraphs.map((paragraph, index) => ({
       paragraphNumber: index + 1,
@@ -235,8 +238,8 @@ exports.createRecruit = (req, res) => {
 
     // 검증
     if (!Number.isInteger(amount) || Number(amount) <= 0 ||
-        isBlank(title) || title.length > 150 || isBlank(description) || title.length > 1000 ||
-        isBlank(sample) || sample.length > 1000 || isBlank(script) || script.length > 8000) {
+      isBlank(title) || title.length > 150 || isBlank(description) || title.length > 1000 ||
+      isBlank(sample) || sample.length > 1000 || isBlank(script) || script.length > 8000) {
       res.status(412).json({
         message: '파라미터가 부적합합니다.',
       });
@@ -284,21 +287,24 @@ exports.createRecruit = (req, res) => {
                   detail: created,
                 });
               })
-              .catch(() => {
+              .catch((err) => {
+                console.log(err);
                 transaction.rollback();
                 res.status(400).json({
                   message: '구인 정보 추가에 실패했습니다.',
                 });
               });
           })
-          .catch(() => {
+          .catch((err) => {
+            console.log(err);
             transaction.rollback();
             res.status(400).json({
               message: '구인 정보 추가에 실패했습니다.',
             });
           });
       })
-      .catch(() => {
+      .catch((err) => {
+        console.log(err);
         res.status(400).json({
           message: '구인 정보 추가에 실패했습니다.',
         });

@@ -22,6 +22,7 @@ exports.join = (req, res) => {
     validateEmail(mail);
     validateUserType(type);
   } catch (error) {
+    console.error(error);
     res.status(412).json({
       message: '회원가입 조건을 만족하지 않습니다.',
     });
@@ -95,8 +96,9 @@ exports.join = (req, res) => {
                     });
                   });
               })
-              .catch(sequelize.ValidationError, () => {
+              .catch(sequelize.ValidationError, (err) => {
                 transaction.rollback();
+                console.error(err);
                 res.status(412).json({
                   message: '회원가입 조건을 만족하지 않습니다.',
                 });

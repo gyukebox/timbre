@@ -40,7 +40,6 @@ exports.getChartInfo = (req, res) => {
   };
 
   if (category !== undefined && category !== null) {
-
     if (categories.indexOf(category) > -1) {
       query.category = category;
     } else {
@@ -53,7 +52,7 @@ exports.getChartInfo = (req, res) => {
 
   const mostExpensiveRecruits = recruitModel
     .findAll({
-      where: query,
+      where: { active: true },
       attributes,
       order: [['amount', 'DESC']],
     });
